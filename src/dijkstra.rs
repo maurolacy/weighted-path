@@ -8,7 +8,7 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     //  println!("{:?}", lines);
 
     // 1. Parse the graph and build and adjacency matrix.
-    if lines.len() == 0 {
+    if lines.is_empty() {
         return "-1".to_string();
     }
     // Number of nodes
@@ -21,9 +21,9 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     // Get the nodes
     let mut nodes = HashMap::new();
     let mut nodes_reverse = HashMap::new();
-    for i in 1usize..N + 1 {
-        nodes.insert(lines[i], i - 1); // node id map
-        nodes_reverse.insert(i - 1, lines[i]); // node map
+    for (i, &item) in lines.iter().enumerate().skip(1usize).take(N) {
+        nodes.insert(item, i - 1); // node id map
+        nodes_reverse.insert(i - 1, item); // node map
     }
     if N == 1 {
         return nodes_reverse.get(&0).unwrap().to_string(); // single node case
@@ -32,13 +32,12 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     // Build the adjacency matrix
     let A_line = vec![u32::MAX; N];
     let mut A = vec![A_line; N];
-    for i in 1 + N..lines.len() {
-        let line = lines[i];
+    for line in lines.iter().skip(1 + N) {
         let (node_1, node_2_weight) = line.split_at(line.find("|").unwrap());
         let (node_2, weight) = node_2_weight[1..].split_at(node_2_weight[1..].find("|").unwrap());
         let weight = weight[1..].parse::<u32>().unwrap();
-        let node_1_index = nodes.get(node_1).unwrap();
-        let node_2_index = nodes.get(node_2).unwrap();
+        let node_1_index = nodes.get(&node_1).unwrap();
+        let node_2_index = nodes.get(&node_2).unwrap();
         A[*node_1_index][*node_2_index] = weight;
         A[*node_2_index][*node_1_index] = weight; // Bi-directional edges
     }
@@ -58,7 +57,7 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     let mut path_nodes = String::new();
     let mut first = true;
     for node_id in path {
-        let node = nodes_reverse.get(&(node_id as usize)).unwrap();
+        let node = nodes_reverse.get(&{ node_id }).unwrap();
         if first {
             path_nodes = node.to_string();
             first = false;
@@ -66,12 +65,12 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
         }
         path_nodes = format!("{path_nodes}-{node}");
     }
-    return path_nodes;
+    path_nodes
     //  return "-1".to_string();
 }
 
-fn dijkstra(start: usize, end: usize, graph: &Vec<Vec<u32>>) -> Vec<usize> {
-    let mut distances = vec![std::u32::MAX; graph.len()];
+fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
+    let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
     let mut priority_queue = BinaryHeap::new();
