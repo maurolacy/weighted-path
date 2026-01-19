@@ -1,5 +1,8 @@
 use crate::fibonacci_heap::{FibonacciHeap, Node};
+use crate::fibonacci_heap_safe::SafeFibonacciHeap;
+use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashMap};
+use std::rc::Rc;
 
 /// Find the shortest path in a weighted graph using Dijkstra's algorithm.
 ///
@@ -263,6 +266,76 @@ pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>])
 
                 // Use decrease_key if node is already in heap, otherwise insert
                 if let Some(handle) = handles[neighbor] {
+                    // Node is already in heap - use decrease_key (O(1) amortized)
+                    heap.decrease_key(handle, new_distance);
+                } else {
+                    // Insert new node
+                    let handle = heap.insert(new_distance, neighbor);
+                    handles[neighbor] = Some(handle);
+                }
+            }
+        }
+    }
+
+    // Reconstruct path
+    let mut path = Vec::new();
+    let mut current = end;
+
+    // Check if path exists
+    if distances[end] == u32::MAX {
+        return path; // No path found
+    }
+
+    // Build path backwards, then reverse once
+    while let Some(prev) = previous[current] {
+        path.push(current);
+        current = prev;
+    }
+    path.push(start);
+    path.reverse();
+    path
+}
+
+/// Safe Fibonacci heap version - uses Rc<RefCell> instead of raw pointers
+/// This version is memory-safe but may have different performance characteristics
+pub fn dijkstra_fibonacci_safe(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> Vec<usize> {
+    let mut distances = vec![u32::MAX; graph.len()];
+    distances[start] = 0;
+    let mut previous = vec![None; graph.len()];
+
+    // Track handles (Rc<RefCell>) for decrease_key operations
+    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci_heap_safe::SafeNode>>>> =
+        vec![None; graph.len()];
+    let mut heap = SafeFibonacciHeap::new();
+
+    // Insert start node
+    let handle = heap.insert(0, start);
+    handles[start] = Some(handle);
+
+    while let Some((current_distance, current_node)) = heap.extract_min() {
+        // Skip if we've already found a better path (duplicate entry)
+        if distances[current_node] < current_distance {
+            continue;
+        }
+
+        // Early termination: if we've reached the target, we're done
+        if current_node == end {
+            break;
+        }
+
+        // Process neighbors
+        for &(neighbor, weight) in &graph[current_node] {
+            let new_distance = current_distance + weight;
+            if new_distance < distances[neighbor] {
+                distances[neighbor] = new_distance;
+                previous[neighbor] = Some(current_node);
+
+                // Use decrease_key if node is already in heap, otherwise insert
+                if let Some(ref handle) = handles[neighbor] {
                     // Node is already in heap - use decrease_key (O(1) amortized)
                     heap.decrease_key(handle, new_distance);
                 } else {
