@@ -1,9 +1,7 @@
 #![allow(non_snake_case)]
 
 use std::collections::{BinaryHeap, HashMap};
-use fibonacci_heap::FibonacciHeap;
-use std::rc::Rc;
-use std::cell::RefCell;
+use crate::fibonacci_heap::{FibonacciHeap, Node};
 
 // code goes here
 // note: you are able to modify the parameter types
@@ -193,58 +191,34 @@ pub(crate) fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) ->
 
 // Fibonacci heap version - potentially faster for dense graphs with many decrease_key operations
 // Time complexity: O(E + V log V) amortized vs O((V + E) log V) for binary heap
-// Note: The fibonacci_heap crate API is limited (extract_min only returns key, not node).
-// We work around this by maintaining a separate mapping and using peek + manual tracking.
+// Uses our custom Fibonacci heap implementation that properly supports decrease_key
 /// Fibonacci heap version - exposed for benchmarking
 pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
 
-    // Track handles for decrease_key operations
-    // Map from node_index to handle
-    let mut handles: Vec<Option<Rc<RefCell<fibonacci_heap::Node>>>> = vec![None; graph.len()];
-    // Map from (key, node_id_in_heap) to our node_index
-    // Since extract_min only gives us the key, we need to track which nodes have which keys
-    let mut active_nodes: HashMap<i32, Vec<usize>> = HashMap::new(); // key -> list of node indices with this key
+    // Track handles (raw pointers) for decrease_key operations
+    // Our custom implementation uses raw pointers to avoid RefCell borrow conflicts
+    let mut handles: Vec<Option<*mut Node>> = vec![None; graph.len()];
     let mut heap = FibonacciHeap::new();
 
     // Insert start node
-    if let Ok(handle) = heap.insert(0) {
-        handles[start] = Some(handle);
-        active_nodes.entry(0).or_insert_with(Vec::new).push(start);
-    }
+    let handle = heap.insert(0, start);
+    handles[start] = Some(handle);
 
-    while let Some(min_key) = heap.peek_min() {
-        // Find a node with this minimum key that hasn't been processed
-        let node_opt = active_nodes.get_mut(&min_key).and_then(|nodes| {
-            nodes.pop().filter(|&idx| {
-                // Check if this node still has this distance (might have been updated)
-                distances[idx] == min_key as u32
-            })
-        });
-
-        let current_node = match node_opt {
-            Some(node) => node,
-            None => {
-                // No valid node with this key, extract and continue
-                heap.extract_min();
-                continue;
-            }
-        };
-
-        let current_distance = min_key as u32;
-
-        // Extract the min (we know it's this node's key)
-        heap.extract_min();
-        handles[current_node] = None;
+    while let Some((current_distance, current_node)) = heap.extract_min() {
+        // Skip if we've already found a better path (duplicate entry)
+        if distances[current_node] < current_distance {
+            continue;
+        }
 
         // Early termination: if we've reached the target, we're done
         if current_node == end {
             break;
         }
 
-        // Iterate only over actual neighbors (adjacency list)
+        // Process neighbors
         for &(neighbor, weight) in &graph[current_node] {
             let new_distance = current_distance + weight;
             if new_distance < distances[neighbor] {
@@ -252,23 +226,13 @@ pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>])
                 previous[neighbor] = Some(current_node);
 
                 // Use decrease_key if node is already in heap, otherwise insert
-                if let Some(handle) = handles[neighbor].take() {
-                    let old_key = handle.borrow().key;
-                    // Remove from old key's list
-                    if let Some(nodes) = active_nodes.get_mut(&old_key) {
-                        nodes.retain(|&x| x != neighbor);
-                    }
-                    // Decrease key
-                    if heap.decrease_key(&handle, new_distance as i32).is_ok() {
-                        handles[neighbor] = Some(handle);
-                        active_nodes.entry(new_distance as i32).or_insert_with(Vec::new).push(neighbor);
-                    }
+                if let Some(handle) = handles[neighbor] {
+                    // Node is already in heap - use decrease_key (O(1) amortized)
+                    heap.decrease_key(handle, new_distance);
                 } else {
                     // Insert new node
-                    if let Ok(handle) = heap.insert(new_distance as i32) {
-                        handles[neighbor] = Some(handle);
-                        active_nodes.entry(new_distance as i32).or_insert_with(Vec::new).push(neighbor);
-                    }
+                    let handle = heap.insert(new_distance, neighbor);
+                    handles[neighbor] = Some(handle);
                 }
             }
         }
