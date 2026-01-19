@@ -4,42 +4,99 @@ use std::collections::{BinaryHeap, HashMap};
 
 // code goes here
 // note: you are able to modify the parameter types
-pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
+pub(crate) fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
     //  println!("{:?}", lines);
 
     // 1. Parse the graph and build and adjacency matrix.
     if lines.is_empty() {
-        return "-1".to_string();
+        return Ok("-1".to_string());
     }
+    
     // Number of nodes
-    let N = lines[0].parse::<u32>().unwrap() as usize;
-    //  println!("N: {N}");
+    let N = lines[0]
+        .parse::<u32>()
+        .map_err(|_| format!("Invalid number of nodes: '{}' (expected a positive integer)", lines[0]))? as usize;
+    
     if N == 0 {
-        return "-1".to_string();
+        return Ok("-1".to_string());
+    }
+
+    // Validate we have enough lines for node names
+    if lines.len() < 1 + N {
+        return Err(format!(
+            "Not enough lines: expected {} node names, but only {} lines provided",
+            N,
+            lines.len().saturating_sub(1)
+        ));
     }
 
     // Get the nodes
     let mut nodes = HashMap::new();
     let mut nodes_reverse = HashMap::new();
+    let mut seen_nodes = std::collections::HashSet::new();
+    
     for (i, &item) in lines.iter().enumerate().skip(1usize).take(N) {
-        nodes.insert(item, i - 1); // node id map
-        nodes_reverse.insert(i - 1, item); // node map
+        let node_name = item.trim();
+        if node_name.is_empty() {
+            return Err(format!("Empty node name at line {}", i + 1));
+        }
+        
+        // Check for duplicate node names
+        if !seen_nodes.insert(node_name) {
+            return Err(format!("Duplicate node name: '{}'", node_name));
+        }
+        
+        nodes.insert(node_name, i - 1); // node id map
+        nodes_reverse.insert(i - 1, node_name); // node map
     }
+    
     if N == 1 {
-        return nodes_reverse.get(&0).unwrap().to_string(); // single node case
+        return Ok(nodes_reverse.get(&0)
+            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
+            .to_string());
     }
 
     // Build the adjacency matrix
     let A_line = vec![u32::MAX; N];
     let mut A = vec![A_line; N];
-    for line in lines.iter().skip(1 + N) {
+    
+    for (line_num, line) in lines.iter().skip(1 + N).enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue; // Skip empty lines
+        }
+        
         // Split the line into node 1, node 2, and weight
-        let mut splits = line.split("|");
-        let node_1 = splits.next().unwrap();
-        let node_2 = splits.next().unwrap();
-        let weight = splits.next().unwrap().parse::<u32>().unwrap();
-        let node_1_index = nodes.get(node_1).unwrap();
-        let node_2_index = nodes.get(node_2).unwrap();
+        let parts: Vec<&str> = line.split("|").collect();
+        
+        if parts.len() != 3 {
+            return Err(format!(
+                "Invalid edge format at line {}: '{}' (expected format: node1|node2|weight)",
+                line_num + 1 + N + 1,
+                line
+            ));
+        }
+        
+        let node_1 = parts[0].trim();
+        let node_2 = parts[1].trim();
+        let weight_str = parts[2].trim();
+        
+        // Validate node names exist
+        let node_1_index = nodes.get(node_1)
+            .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_1))?;
+        let node_2_index = nodes.get(node_2)
+            .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_2))?;
+        
+        // Validate weight
+        let weight = weight_str
+            .parse::<u32>()
+            .map_err(|_| format!("Invalid weight '{}' in edge '{}|{}|{}' (expected a positive integer)", weight_str, node_1, node_2, weight_str))?;
+        
+        // Check for self-loops (optional validation)
+        if node_1_index == node_2_index {
+            return Err(format!("Self-loop detected: node '{}' connected to itself", node_1));
+        }
+        
         A[*node_1_index][*node_2_index] = weight;
         A[*node_2_index][*node_1_index] = weight; // Bi-directional edges
     }
@@ -52,14 +109,15 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
 
     // 3. Return the shortest path; if no shortest path found, return -1.
     if path.len() <= 1 {
-        return "-1".to_string();
+        return Ok("-1".to_string());
     }
 
     // Map path node ids to nodes
     let mut path_nodes = String::new();
     let mut first = true;
     for node_id in path {
-        let node = nodes_reverse.get(&{ node_id }).unwrap();
+        let node = nodes_reverse.get(&node_id)
+            .ok_or_else(|| format!("Internal error: node ID {} not found in reverse map", node_id))?;
         if first {
             path_nodes = node.to_string();
             first = false;
@@ -67,7 +125,7 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
         }
         path_nodes = format!("{path_nodes}-{node}");
     }
-    path_nodes
+    Ok(path_nodes)
 }
 
 fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
