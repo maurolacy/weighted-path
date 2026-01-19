@@ -1,7 +1,7 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use weigthed_path::dijkstra::{
-    dijkstra_fibonacci, find_shortest_path, find_shortest_path_directed,
+    dijkstra_fibonacci, dijkstra_fibonacci_safe, find_shortest_path, find_shortest_path_directed,
 };
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
@@ -258,6 +258,77 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
     group.finish();
 }
 
+fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
+    let mut group = c.benchmark_group("fibonacci_heap_comparison");
+
+    let test_cases = vec![
+        (500, 0.1, "sparse_500"),
+        (1000, 0.1, "sparse_1000"),
+        (500, 0.3, "dense_500"),
+        (1000, 0.3, "dense_1000"),
+    ];
+
+    for (nodes, density, name) in test_cases {
+        let graph = generate_test_graph_with_seed(nodes, density, false, Some(42));
+
+        // Build adjacency list
+        let mut adj_list = vec![Vec::new(); nodes];
+        for line in graph.iter().skip(1 + nodes) {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() == 3
+                && let (Some(i_str), Some(j_str)) =
+                    (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
+                && let (Ok(i), Ok(j), Ok(w)) = (
+                    i_str.parse::<usize>(),
+                    j_str.parse::<usize>(),
+                    parts[2].parse::<u32>(),
+                )
+                && i < nodes
+                && j < nodes
+            {
+                adj_list[i].push((j, w));
+                adj_list[j].push((i, w)); // bidirectional
+            }
+        }
+
+        // Verify both implementations produce the same result
+        let unsafe_result = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
+        let safe_result = dijkstra_fibonacci_safe(0, adj_list.len() - 1, &adj_list);
+
+        assert_eq!(
+            unsafe_result, safe_result,
+            "Mismatch for {}: unsafe={:?}, safe={:?}",
+            name, unsafe_result, safe_result
+        );
+
+        // Benchmark unsafe (raw pointers) version
+        group.bench_with_input(
+            BenchmarkId::new("unsafe_raw_pointers", name),
+            &adj_list,
+            |b, graph| {
+                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
+            },
+        );
+
+        // Benchmark safe (Rc<RefCell>) version
+        group.bench_with_input(
+            BenchmarkId::new("safe_rc_refcell", name),
+            &adj_list,
+            |b, graph| {
+                b.iter(|| {
+                    black_box(dijkstra_fibonacci_safe(
+                        0,
+                        graph.len() - 1,
+                        black_box(graph),
+                    ))
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_graph_parsing,
@@ -272,6 +343,10 @@ criterion_group!(
 criterion_group!(reference, benchmark_reference);
 
 // Heap comparison benchmark group
-criterion_group!(heap_compare, benchmark_heap_comparison);
+criterion_group!(
+    heap_compare,
+    benchmark_heap_comparison,
+    benchmark_fibonacci_heap_comparison
+);
 
 criterion_main!(benches, reference, heap_compare);
