@@ -1,10 +1,10 @@
 #![allow(non_snake_case)]
 
-mod bfs;
+mod dijkstra;
 
 use std::{env::args, fs::File, io::{self, BufRead, BufReader}};
 
-use bfs::GraphChallenge;
+use dijkstra::GraphChallenge;
 
 fn main() {
     // First argument is the file to read
