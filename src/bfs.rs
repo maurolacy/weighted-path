@@ -35,8 +35,8 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
   // Build the adjacency matrix
   let A_line = vec![0u32; N];
   let mut A = vec![A_line; N];
-  for i in 0..N {
-    let line = lines[1+N+i];
+  for i in N+1..lines.len() {
+    let line = lines[i];
     let (node_1, node_2_weight) = line.split_at(line.find("|").unwrap());
     let (node_2, weight) = node_2_weight[1..].split_at(node_2_weight[1..].find("|").unwrap());
     let weight = weight[1..].parse::<u32>().unwrap();
@@ -114,7 +114,12 @@ fn bfs(from: u32, to: u32, v: &Vec<Vec<u32>>) -> Vec<u32> {
     while p != from {
 //        println!("visited[{p}]: {:#?}", visited[p as usize]);
         p = visited[p as usize].0;
-        path.push(p);
+        if p != 0xffff {
+          path.push(p);
+        }
+        else {
+          return vec![];
+        }
     }
 
     path.reverse();
