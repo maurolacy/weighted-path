@@ -205,7 +205,7 @@ fn benchmark_reference(c: &mut Criterion) {
 
     // Medium-sized graph: 500 nodes, 10% density - representative workload
     // Fixed seed ensures same graph every time for consistent benchmarking
-    let graph = generate_test_graph_with_seed(500, 0.1, false, Some(42));
+    let graph = generate_test_graph_with_seed(5000, 0.1, false, Some(42));
     let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
 
     group.bench_function("500_nodes_10pct_density", |b| {
