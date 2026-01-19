@@ -223,15 +223,17 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
             if parts.len() == 3
                 && let (Some(i_str), Some(j_str)) =
                     (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
-                    && let (Ok(i), Ok(j), Ok(w)) = (
-                        i_str.parse::<usize>(),
-                        j_str.parse::<usize>(),
-                        parts[2].parse::<u32>(),
-                    )
-                        && i < nodes && j < nodes {
-                            adj_list[i].push((j, w));
-                            adj_list[j].push((i, w)); // bidirectional
-                        }
+                && let (Ok(i), Ok(j), Ok(w)) = (
+                    i_str.parse::<usize>(),
+                    j_str.parse::<usize>(),
+                    parts[2].parse::<u32>(),
+                )
+                && i < nodes
+                && j < nodes
+            {
+                adj_list[i].push((j, w));
+                adj_list[j].push((i, w)); // bidirectional
+            }
         }
 
         // Benchmark binary heap (via GraphChallenge)
