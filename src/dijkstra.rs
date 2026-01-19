@@ -131,20 +131,14 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
         return Ok("-1".to_string());
     }
 
-    // Map path node ids to nodes
-    let mut path_nodes = String::new();
-    let mut first = true;
+    // Map path node ids to nodes - optimized string building
+    let mut path_parts = Vec::with_capacity(path.len());
     for node_id in path {
         let node = nodes_reverse.get(&node_id)
             .ok_or_else(|| format!("Internal error: node ID {} not found in reverse map", node_id))?;
-        if first {
-            path_nodes = node.to_string();
-            first = false;
-            continue;
-        }
-        path_nodes = format!("{path_nodes}-{node}");
+        path_parts.push(*node);
     }
-    Ok(path_nodes)
+    Ok(path_parts.join("-"))
 }
 
 fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
@@ -152,12 +146,19 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
     let mut priority_queue = BinaryHeap::new();
-    priority_queue.push((0, start));
+    priority_queue.push((std::cmp::Reverse(0), start));
 
-    while let Some((current_distance, current_node)) = priority_queue.pop() {
+    while let Some((std::cmp::Reverse(current_distance), current_node)) = priority_queue.pop() {
+        // Early termination: if we've reached the target, we're done
+        if current_node == end {
+            break;
+        }
+
+        // Skip if we've already found a better path to this node
         if distances[current_node] < current_distance {
             continue;
         }
+
         for (neighbor, weight) in graph[current_node].iter().enumerate() {
             if *weight == u32::MAX {
                 continue;
@@ -166,12 +167,21 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
             if new_distance < distances[neighbor] {
                 distances[neighbor] = new_distance;
                 previous[neighbor] = Some(current_node);
-                priority_queue.push((new_distance, neighbor));
+                priority_queue.push((std::cmp::Reverse(new_distance), neighbor));
             }
         }
     }
+
+    // Reconstruct path in reverse order to avoid reversing at the end
     let mut path = Vec::new();
     let mut current = end;
+
+    // Check if path exists
+    if distances[end] == u32::MAX {
+        return path; // No path found
+    }
+
+    // Build path backwards, then reverse once
     while let Some(prev) = previous[current] {
         path.push(current);
         current = prev;

@@ -150,6 +150,9 @@ cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
 # Run all benchmarks
 cargo bench --bench dijkstra_bench
 
+# Run reference benchmark (quick performance check)
+cargo bench --bench dijkstra_bench -- reference
+
 # Run specific benchmark group
 cargo bench --bench dijkstra_bench -- dijkstra_algorithm
 ```
@@ -170,6 +173,11 @@ The current implementation uses:
 - **Adjacency matrix**: O(V²) space complexity where V is the number of vertices
 - **Dijkstra's algorithm**: O(V²) time complexity with the current implementation
 - **Binary heap priority queue**: Used for efficient minimum distance extraction
+
+**Performance Optimizations:**
+- **Early termination**: Algorithm stops immediately when the target node is reached
+- **Optimized string building**: Uses `join()` instead of repeated `format!()` calls
+- **Efficient priority queue**: Uses `Reverse` wrapper for proper min-heap behavior
 
 For very large graphs (10,000+ nodes), consider:
 - Using an adjacency list instead of a matrix for sparse graphs
