@@ -175,9 +175,9 @@ The current implementation uses:
 - **Binary heap priority queue**: Used for efficient minimum distance extraction
 
 **Performance Optimizations:**
-- **Early termination**: Algorithm stops immediately when the target node is reached (only works correctly with proper min-heap)
+- **Early termination**: Algorithm stops immediately when the target node is reached
 - **Optimized string building**: Uses `join()` instead of repeated `format!()` calls
-- **Efficient priority queue**: Uses distance inversion (`u32::MAX - distance`) to convert BinaryHeap (max-heap) into a min-heap, avoiding wrapper overhead while maintaining correctness
+- **Efficient priority queue**: Uses `Reverse` wrapper for proper min-heap behavior
 
 For very large graphs (10,000+ nodes), consider:
 - Using an adjacency list instead of a matrix for sparse graphs

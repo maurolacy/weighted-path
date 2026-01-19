@@ -145,16 +145,10 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
-    // BinaryHeap is a max-heap, so we invert the distance to make it a min-heap.
-    // Using u32::MAX - distance is faster than Reverse wrapper (no struct overhead).
-    // This works because: u32::MAX - d1 < u32::MAX - d2 when d1 > d2.
-    // Note: This is safe because actual path distances are much smaller than u32::MAX.
     let mut priority_queue = BinaryHeap::new();
-    priority_queue.push((u32::MAX - 0, start));
+    priority_queue.push((std::cmp::Reverse(0), start));
 
-    while let Some((inverted_distance, current_node)) = priority_queue.pop() {
-        let current_distance = u32::MAX - inverted_distance;
-
+    while let Some((std::cmp::Reverse(current_distance), current_node)) = priority_queue.pop() {
         // Early termination: if we've reached the target, we're done
         if current_node == end {
             break;
@@ -173,7 +167,7 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
             if new_distance < distances[neighbor] {
                 distances[neighbor] = new_distance;
                 previous[neighbor] = Some(current_node);
-                priority_queue.push((u32::MAX - new_distance, neighbor));
+                priority_queue.push((std::cmp::Reverse(new_distance), neighbor));
             }
         }
     }
