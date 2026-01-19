@@ -36,7 +36,7 @@ fn main() {
 
     let mut output: Box<dyn Write> = match output_file {
         Some(path) => Box::new(
-            std::fs::File::create(path).expect(&format!("Failed to create file: {}", path)),
+            std::fs::File::create(path).unwrap_or_else(|_| panic!("Failed to create file: {}", path)),
         ),
         None => Box::new(io::stdout()),
     };

@@ -220,22 +220,18 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
         let mut adj_list = vec![Vec::new(); nodes];
         for line in graph.iter().skip(1 + nodes) {
             let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 3 {
-                if let (Some(i_str), Some(j_str)) =
+            if parts.len() == 3
+                && let (Some(i_str), Some(j_str)) =
                     (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
-                {
-                    if let (Ok(i), Ok(j), Ok(w)) = (
+                    && let (Ok(i), Ok(j), Ok(w)) = (
                         i_str.parse::<usize>(),
                         j_str.parse::<usize>(),
                         parts[2].parse::<u32>(),
-                    ) {
-                        if i < nodes && j < nodes {
+                    )
+                        && i < nodes && j < nodes {
                             adj_list[i].push((j, w));
                             adj_list[j].push((i, w)); // bidirectional
                         }
-                    }
-                }
-            }
         }
 
         // Benchmark binary heap (via GraphChallenge)

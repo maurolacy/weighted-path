@@ -40,6 +40,12 @@ pub struct FibonacciHeap {
 unsafe impl Send for FibonacciHeap {}
 unsafe impl Sync for FibonacciHeap {}
 
+impl Default for FibonacciHeap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FibonacciHeap {
     pub fn new() -> Self {
         FibonacciHeap {
