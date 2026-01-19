@@ -51,13 +51,15 @@ impl SafeFibonacciHeap {
         }
 
         // Add to root list
-        if self.min.is_none() {
-            self.min = Some(Rc::clone(&node));
-        } else {
+        if let Some(ref min_ref) = self.min {
+            let node_key = node.borrow().key;
+            let min_key = min_ref.borrow().key;
             self.add_to_root_list(&node);
-            if node.borrow().key < self.min.as_ref().unwrap().borrow().key {
+            if node_key < min_key {
                 self.min = Some(Rc::clone(&node));
             }
+        } else {
+            self.min = Some(Rc::clone(&node));
         }
 
         node
@@ -131,10 +133,12 @@ impl SafeFibonacciHeap {
         self.min = new_min;
         if let Some(children_vec) = children {
             for child in children_vec {
-                if self.min.is_some() {
+                if let Some(ref min_ref) = self.min {
+                    let child_key = child.borrow().key;
+                    let min_key = min_ref.borrow().key;
                     self.add_to_root_list(&child);
                     // Update min if needed
-                    if child.borrow().key < self.min.as_ref().unwrap().borrow().key {
+                    if child_key < min_key {
                         self.min = Some(child);
                     }
                 } else {
@@ -175,13 +179,21 @@ impl SafeFibonacciHeap {
 
         for w in roots {
             let mut x = w;
-            let mut d = x.borrow().degree;
+            let mut d = {
+                let x_borrow = x.borrow();
+                x_borrow.degree
+            };
 
             while d < max_degree && degree_table[d].is_some() {
                 let mut y = degree_table[d].take().unwrap();
 
-                // Swap if needed so x has smaller key
-                if x.borrow().key > y.borrow().key {
+                // Swap if needed so x has smaller key (cache keys to avoid double borrow)
+                let (x_key, y_key) = {
+                    let x_borrow = x.borrow();
+                    let y_borrow = y.borrow();
+                    (x_borrow.key, y_borrow.key)
+                };
+                if x_key > y_key {
                     std::mem::swap(&mut x, &mut y);
                 }
 
@@ -197,15 +209,17 @@ impl SafeFibonacciHeap {
         // Rebuild root list
         self.min = None;
         for node in degree_table.iter().flatten() {
-            if self.min.is_none() {
+            if let Some(ref min_ref) = self.min {
+                let node_key = node.borrow().key;
+                let min_key = min_ref.borrow().key;
+                self.add_to_root_list(node);
+                if node_key < min_key {
+                    self.min = Some(Rc::clone(node));
+                }
+            } else {
                 self.min = Some(Rc::clone(node));
                 node.borrow_mut().left = Some(Rc::clone(node));
                 node.borrow_mut().right = Some(Rc::clone(node));
-            } else {
-                self.add_to_root_list(node);
-                if node.borrow().key < self.min.as_ref().unwrap().borrow().key {
-                    self.min = Some(Rc::clone(node));
-                }
             }
         }
     }
@@ -244,8 +258,12 @@ impl SafeFibonacciHeap {
     }
 
     pub fn decrease_key(&mut self, node: &Rc<RefCell<SafeNode>>, new_key: u32) -> bool {
-        // Check if we can decrease
-        let old_key = node.borrow().key;
+        // Check if we can decrease and get parent in one borrow
+        let (old_key, parent_weak) = {
+            let node_borrow = node.borrow();
+            (node_borrow.key, node_borrow.parent.clone())
+        };
+
         if new_key > old_key {
             return false; // Can only decrease
         }
@@ -253,30 +271,22 @@ impl SafeFibonacciHeap {
         // Update key
         node.borrow_mut().key = new_key;
 
-        // Get parent before checking if we need to cut
-        let parent = node.borrow().parent.clone();
-        let needs_cut = if let Some(parent_weak) = &parent {
-            if let Some(parent_rc) = parent_weak.upgrade() {
-                new_key < parent_rc.borrow().key
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        if needs_cut {
-            if let Some(parent_weak) = parent {
-                if let Some(parent_rc) = parent_weak.upgrade() {
-                    self.cut(node, &parent_rc);
-                    self.cascading_cut(&parent_rc);
-                }
+        // Check if we need to cut (only if parent exists and key is smaller)
+        if let Some(parent_weak) = parent_weak
+            && let Some(parent_rc) = parent_weak.upgrade()
+        {
+            // Check parent key in one borrow
+            let parent_key = parent_rc.borrow().key;
+            if new_key < parent_key {
+                self.cut(node, &parent_rc);
+                self.cascading_cut(&parent_rc);
             }
         }
 
-        // Update min if needed
+        // Update min if needed (cache min key to avoid double borrow)
         if let Some(min_ref) = &self.min {
-            if new_key < min_ref.borrow().key {
+            let min_key = min_ref.borrow().key;
+            if new_key < min_key {
                 self.min = Some(Rc::clone(node));
             }
         }
@@ -292,7 +302,7 @@ impl SafeFibonacciHeap {
             let is_parent_child = parent_borrow
                 .child
                 .as_ref()
-                .map_or(false, |c| Rc::ptr_eq(c, node));
+                .is_some_and(|c| Rc::ptr_eq(c, node));
             (
                 node_borrow.left.clone(),
                 node_borrow.right.clone(),
