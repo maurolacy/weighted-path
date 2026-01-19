@@ -189,6 +189,24 @@ fn benchmark_directed_different_sizes(c: &mut Criterion) {
     group.finish();
 }
 
+// Reference benchmark for quick performance checks
+fn benchmark_reference(c: &mut Criterion) {
+    let mut group = c.benchmark_group("reference");
+    group.sample_size(100); // Smaller sample for faster runs
+    
+    // Medium-sized graph: 500 nodes, 10% density - representative workload
+    let graph = generate_test_graph(500, 0.1, false);
+    let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
+    
+    group.bench_function("500_nodes_10pct_density", |b| {
+        b.iter(|| {
+            black_box(GraphChallenge(black_box(graph_refs.clone())))
+        })
+    });
+    
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_graph_parsing,
@@ -198,4 +216,11 @@ criterion_group!(
     benchmark_directed_vs_undirected,
     benchmark_directed_different_sizes
 );
-criterion_main!(benches);
+
+// Reference benchmark group for quick checks
+criterion_group!(
+    reference,
+    benchmark_reference
+);
+
+criterion_main!(benches, reference);
