@@ -168,3 +168,130 @@ fn main() {
   GraphChallenge(coderbyteInternalStdinFunction(io::stdin()));
 }
 */
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_input() {
+        let result = GraphChallenge(vec![]);
+        assert_eq!(result, Ok("-1".to_string()));
+    }
+
+    #[test]
+    fn test_single_node() {
+        let input = vec!["1", "A"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("A".to_string()));
+    }
+
+    #[test]
+    fn test_two_nodes_connected() {
+        let input = vec!["2", "A", "B", "A|B|5"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("A-B".to_string()));
+    }
+
+    #[test]
+    fn test_two_nodes_disconnected() {
+        let input = vec!["2", "A", "B"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("-1".to_string()));
+    }
+
+    #[test]
+    fn test_simple_path() {
+        let input = vec!["3", "A", "B", "C", "A|B|2", "B|C|3"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("A-B-C".to_string()));
+    }
+
+    #[test]
+    fn test_shortest_path_through_intermediate() {
+        // Direct path A->D costs 100, but A->B->C->D costs 1+1+1=3
+        let input = vec!["4", "A", "B", "C", "D", "A|B|1", "B|C|1", "C|D|1", "A|D|100"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("A-B-C-D".to_string()));
+    }
+
+    #[test]
+    fn test_invalid_node_count() {
+        let input = vec!["abc"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid number of nodes"));
+    }
+
+    #[test]
+    fn test_not_enough_nodes() {
+        let input = vec!["3", "A", "B"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Not enough lines"));
+    }
+
+    #[test]
+    fn test_duplicate_node_names() {
+        let input = vec!["2", "A", "A", "A|A|5"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Duplicate node name"));
+    }
+
+    #[test]
+    fn test_invalid_edge_format() {
+        let input = vec!["2", "A", "B", "A|B"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid edge format"));
+    }
+
+    #[test]
+    fn test_node_not_in_list() {
+        let input = vec!["2", "A", "B", "A|C|5"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found in node list"));
+    }
+
+    #[test]
+    fn test_invalid_weight() {
+        let input = vec!["2", "A", "B", "A|B|abc"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid weight"));
+    }
+
+    #[test]
+    fn test_self_loop() {
+        let input = vec!["2", "A", "B", "A|A|5"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Self-loop detected"));
+    }
+
+    #[test]
+    fn test_empty_node_name() {
+        let input = vec!["2", "", "B", "A|B|5"];
+        let result = GraphChallenge(input);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Empty node name"));
+    }
+
+    #[test]
+    fn test_zero_nodes() {
+        let input = vec!["0"];
+        let result = GraphChallenge(input);
+        assert_eq!(result, Ok("-1".to_string()));
+    }
+
+    #[test]
+    fn test_empty_lines_in_edges() {
+        // Should skip empty lines in edge definitions
+        let input = vec!["2", "A", "B", "A|B|5", "", "A|B|3"];
+        let result = GraphChallenge(input);
+        // Should work, but the last edge will overwrite the first
+        assert_eq!(result, Ok("A-B".to_string()));
+    }
+}
