@@ -68,7 +68,6 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
         path_nodes = format!("{path_nodes}-{node}");
     }
     path_nodes
-    //  return "-1".to_string();
 }
 
 fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
@@ -79,9 +78,6 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
     priority_queue.push((0, start));
 
     while let Some((current_distance, current_node)) = priority_queue.pop() {
-        // if current_node == end {
-        //  break;
-        //}
         if distances[current_node] < current_distance {
             continue;
         }
