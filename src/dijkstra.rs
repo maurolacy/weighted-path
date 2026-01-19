@@ -397,6 +397,63 @@ mod tests {
     }
 
     #[test]
+    fn test_fibonacci_heap_comprehensive() {
+        // Comprehensive test comparing both implementations on various graphs
+        let test_cases = vec![
+            // Simple path
+            (vec![vec![(1, 1)], vec![(2, 1)], vec![]], 0, 2, vec![0, 1, 2]),
+            // Disconnected nodes
+            (vec![vec![], vec![]], 0, 1, vec![]),
+            // Single node
+            (vec![vec![]], 0, 0, vec![0]),
+            // Complex graph
+            (
+                vec![
+                    vec![(1, 4), (2, 2)],      // node 0
+                    vec![(2, 1), (3, 5)],     // node 1
+                    vec![(1, 1), (3, 8), (4, 10)], // node 2
+                    vec![(4, 2)],             // node 3
+                    vec![],                   // node 4
+                ],
+                0,
+                4,
+                vec![0, 2, 1, 3, 4], // Path: 0->2->1->3->4 (cost: 2+1+5+2=10)
+            ),
+            // Graph with multiple paths
+            (
+                vec![
+                    vec![(1, 1), (2, 5)],     // node 0
+                    vec![(2, 1), (3, 2)],     // node 1
+                    vec![(3, 3)],             // node 2
+                    vec![],                   // node 3
+                ],
+                0,
+                3,
+                vec![0, 1, 3], // Shortest: 0->1->3 (cost: 1+2=3), not 0->2->3 (cost: 5+3=8)
+            ),
+        ];
+
+        for (graph, start, end, expected_path) in test_cases {
+            let path_binary = dijkstra(start, end, &graph);
+            let path_fib = dijkstra_fibonacci(start, end, &graph);
+
+            assert_eq!(
+                path_binary, path_fib,
+                "Mismatch for graph: start={}, end={}, binary={:?}, fib={:?}",
+                start, end, path_binary, path_fib
+            );
+
+            if !expected_path.is_empty() {
+                assert_eq!(
+                    path_binary, expected_path,
+                    "Path doesn't match expected: got {:?}, expected {:?}",
+                    path_binary, expected_path
+                );
+            }
+        }
+    }
+
+    #[test]
     fn test_empty_lines_in_edges() {
         // Should skip empty lines in edge definitions
         let input = vec!["2", "A", "B", "A|B|5", "", "A|B|3"];

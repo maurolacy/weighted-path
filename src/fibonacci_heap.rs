@@ -1,5 +1,7 @@
 // Minimal Fibonacci Heap implementation for Dijkstra's algorithm
-// This avoids the RefCell borrow issues by using a simpler design
+// This avoids the RefCell borrow issues by using raw pointers with careful unsafe blocks
+
+#![allow(unsafe_op_in_unsafe_fn)] // We carefully manage unsafe operations
 
 use std::ptr;
 
@@ -52,7 +54,7 @@ impl FibonacciHeap {
             // Initialize circular list
             (*node).left = node;
             (*node).right = node;
-            
+
             // Add to root list
             if self.min.is_null() {
                 self.min = node;
@@ -202,8 +204,8 @@ impl FibonacciHeap {
             let parent = (*node).parent;
 
             if !parent.is_null() && (*node).key < (*parent).key {
-                unsafe { self.cut(node, parent); }
-                unsafe { self.cascading_cut(parent); }
+                self.cut(node, parent);
+                self.cascading_cut(parent);
             }
 
             if (*node).key < (*self.min).key {
@@ -240,8 +242,8 @@ impl FibonacciHeap {
             if !(*node).marked {
                 (*node).marked = true;
             } else {
-                unsafe { self.cut(node, parent); }
-                unsafe { self.cascading_cut(parent); }
+                self.cut(node, parent);
+                self.cascading_cut(parent);
             }
         }
     }
