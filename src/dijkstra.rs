@@ -461,4 +461,119 @@ mod tests {
         // Should work, but the last edge will overwrite the first
         assert_eq!(result, Ok("A-B".to_string()));
     }
+
+    // Integration tests from testdata files
+    #[test]
+    fn test_valid_inputs_from_files() {
+        use std::fs;
+        use std::path::Path;
+
+        let testdata_dir = Path::new("testdata");
+        if !testdata_dir.exists() {
+            // Skip if testdata directory doesn't exist (e.g., in CI)
+            return;
+        }
+
+        // Test all input*.txt files
+        for i in 0..=18 {
+            let input_file = testdata_dir.join(format!("input{}.txt", i));
+            let output_file = testdata_dir.join(format!("output{}.txt", i));
+
+            if !input_file.exists() || !output_file.exists() {
+                continue;
+            }
+
+            // Read input file
+            let input_content = fs::read_to_string(&input_file)
+                .unwrap_or_else(|_| panic!("Failed to read {:?}", input_file));
+            let input_lines: Vec<&str> = input_content.lines().collect();
+
+            // Read expected output
+            let expected_output = fs::read_to_string(&output_file)
+                .unwrap_or_else(|_| panic!("Failed to read {:?}", output_file))
+                .trim()
+                .to_string();
+
+            // Run GraphChallenge
+            let result = GraphChallenge(input_lines);
+
+            // Compare results
+            match result {
+                Ok(actual) => {
+                    assert_eq!(
+                        actual, expected_output,
+                        "Mismatch for input{}.txt: expected '{}', got '{}'",
+                        i, expected_output, actual
+                    );
+                }
+                Err(e) => {
+                    panic!(
+                        "input{}.txt should succeed but got error: {}",
+                        i, e
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_invalid_inputs_from_files() {
+        use std::fs;
+        use std::path::Path;
+
+        let testdata_dir = Path::new("testdata");
+        if !testdata_dir.exists() {
+            // Skip if testdata directory doesn't exist (e.g., in CI)
+            return;
+        }
+
+        // Test all invalid*.txt files
+        for i in 1..=6 {
+            let input_file = testdata_dir.join(format!("invalid{}.txt", i));
+            let error_file = testdata_dir.join(format!("error_invalid{}.txt", i));
+
+            if !input_file.exists() || !error_file.exists() {
+                continue;
+            }
+
+            // Read input file
+            let input_content = fs::read_to_string(&input_file)
+                .unwrap_or_else(|_| panic!("Failed to read {:?}", input_file));
+            let input_lines: Vec<&str> = input_content.lines().collect();
+
+            // Read expected error message
+            // Note: error files may include "Graph processing error: " prefix from main.rs
+            // but GraphChallenge returns just the error message
+            let expected_error_full = fs::read_to_string(&error_file)
+                .unwrap_or_else(|_| panic!("Failed to read {:?}", error_file))
+                .trim()
+                .to_string();
+
+            // Strip "Graph processing error: " prefix if present
+            let expected_error = expected_error_full
+                .strip_prefix("Graph processing error: ")
+                .unwrap_or(&expected_error_full)
+                .to_string();
+
+            // Run GraphChallenge - should fail
+            let result = GraphChallenge(input_lines);
+
+            // Compare error messages
+            match result {
+                Ok(_) => {
+                    panic!(
+                        "invalid{}.txt should fail but succeeded. Expected error: {}",
+                        i, expected_error
+                    );
+                }
+                Err(actual_error) => {
+                    assert_eq!(
+                        actual_error, expected_error,
+                        "Error message mismatch for invalid{}.txt:\n  Expected: {}\n  Got: {}",
+                        i, expected_error, actual_error
+                    );
+                }
+            }
+        }
+    }
 }
