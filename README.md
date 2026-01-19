@@ -120,12 +120,29 @@ cargo run --bin generate_graph 1000 0.1 output.txt
 
 **Graph Generator Usage:**
 ```bash
-cargo run --bin generate_graph <num_nodes> [edge_density] [output_file]
+cargo run --bin generate_graph <num_nodes> [edge_density] [output_file] [--directed]
 ```
 
 - `num_nodes`: Number of nodes in the graph (required)
 - `edge_density`: Probability of edge between nodes (0.0-1.0, default: 0.1)
 - `output_file`: Output file path (default: stdout)
+- `--directed`: Generate a directed graph (default: undirected/bidirectional)
+
+**Examples:**
+```bash
+# Generate undirected graph with 1000 nodes
+cargo run --bin generate_graph 1000 0.1 large_graph.txt
+
+# Generate directed graph with 500 nodes
+cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
+```
+
+**Note on Directed vs Undirected:**
+- **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both A→B and B→A are created with weight `w`.
+- **Directed graphs**: The `GraphChallengeWithDirection` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
+- **Input format**: The same input can be processed as either directed or undirected by using `GraphChallengeWithDirection(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created (overwriting any existing reverse edges with the same weight).
+- **Benchmarking**: This allows testing the same graph structure in both modes for fair performance comparison. The benchmark suite includes a `directed_vs_undirected` benchmark that tests the same graph with both settings.
+- **Performance**: Directed graphs typically have fewer edges (only forward direction), while undirected graphs have symmetric edges. The same input processed as undirected will have more edges and may be slightly slower.
 
 ### Running Benchmarks
 
@@ -141,6 +158,8 @@ The benchmarks test:
 - **Graph parsing performance** across different graph sizes (10, 50, 100, 500, 1000 nodes)
 - **Dijkstra algorithm performance** across different graph sizes (10, 50, 100, 500, 1000, 2000 nodes)
 - **Edge density impact** on performance (0.01, 0.05, 0.1, 0.2, 0.5 density with 500 nodes)
+- **Directed vs Undirected graphs** comparison: Same graph structure tested with `bidirectional=true` (undirected) and `bidirectional=false` (directed) for fair comparison
+- **Directed graph performance** across different sizes (100, 500, 1000 nodes)
 - **Real-world graph performance** using actual test files
 
 Benchmark results are saved in `target/criterion/` and include HTML reports with detailed statistics and graphs.

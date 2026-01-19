@@ -5,18 +5,29 @@ use std::collections::{BinaryHeap, HashMap};
 // code goes here
 // note: you are able to modify the parameter types
 pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
+    GraphChallengeWithDirection(lines, true) // Default to undirected/bidirectional
+}
+
+/// Process graph with explicit control over edge directionality.
+///
+/// # Arguments
+/// * `lines` - Graph definition lines (same format as GraphChallenge)
+/// * `bidirectional` - If true, edges are made bidirectional (undirected graph).
+///                     If false, edges are one-way only (directed graph).
+///                     When true, if both A->B and B->A are specified, the last weight wins.
+pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Result<String, String> {
     //  println!("{:?}", lines);
 
     // 1. Parse the graph and build and adjacency matrix.
     if lines.is_empty() {
         return Ok("-1".to_string());
     }
-    
+
     // Number of nodes
     let N = lines[0]
         .parse::<u32>()
         .map_err(|_| format!("Invalid number of nodes: '{}' (expected a positive integer)", lines[0]))? as usize;
-    
+
     if N == 0 {
         return Ok("-1".to_string());
     }
@@ -34,22 +45,22 @@ pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
     let mut nodes = HashMap::new();
     let mut nodes_reverse = HashMap::new();
     let mut seen_nodes = std::collections::HashSet::new();
-    
+
     for (i, &item) in lines.iter().enumerate().skip(1usize).take(N) {
         let node_name = item.trim();
         if node_name.is_empty() {
             return Err(format!("Empty node name at line {}", i + 1));
         }
-        
+
         // Check for duplicate node names
         if !seen_nodes.insert(node_name) {
             return Err(format!("Duplicate node name: '{}'", node_name));
         }
-        
+
         nodes.insert(node_name, i - 1); // node id map
         nodes_reverse.insert(i - 1, node_name); // node map
     }
-    
+
     if N == 1 {
         return Ok(nodes_reverse.get(&0)
             .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
@@ -59,16 +70,16 @@ pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
     // Build the adjacency matrix
     let A_line = vec![u32::MAX; N];
     let mut A = vec![A_line; N];
-    
+
     for (line_num, line) in lines.iter().skip(1 + N).enumerate() {
         let line = line.trim();
         if line.is_empty() {
             continue; // Skip empty lines
         }
-        
+
         // Split the line into node 1, node 2, and weight
         let parts: Vec<&str> = line.split("|").collect();
-        
+
         if parts.len() != 3 {
             return Err(format!(
                 "Invalid edge format at line {}: '{}' (expected format: node1|node2|weight)",
@@ -76,34 +87,42 @@ pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
                 line
             ));
         }
-        
+
         let node_1 = parts[0].trim();
         let node_2 = parts[1].trim();
         let weight_str = parts[2].trim();
-        
+
         // Validate node names exist
         let node_1_index = nodes.get(node_1)
             .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_1))?;
         let node_2_index = nodes.get(node_2)
             .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_2))?;
-        
+
         // Validate weight
         let weight = weight_str
             .parse::<u32>()
             .map_err(|_| format!("Invalid weight '{}' in edge '{}|{}|{}' (expected a positive integer)", weight_str, node_1, node_2, weight_str))?;
-        
+
         // Check for self-loops (optional validation)
         if node_1_index == node_2_index {
             return Err(format!("Self-loop detected: node '{}' connected to itself", node_1));
         }
-        
+
+        // Set edge in the specified direction
         A[*node_1_index][*node_2_index] = weight;
-        A[*node_2_index][*node_1_index] = weight; // Bi-directional edges
+
+        // If bidirectional is true, also set the reverse edge
+        // If reverse edge already exists with different weight, it will be overwritten
+        if bidirectional {
+            A[*node_2_index][*node_1_index] = weight;
+        }
     }
     //  println!("{A:#?}");
 
-    // 2. Use Dijstra's to traverse the graph form the first node, and find
+    // 2. Use Dijstra's to traverse the graph from the first node, and find
     // the shortest path to the last one.
+    // Edges are stored bidirectionally in the adjacency matrix for convenience.
+    // The algorithm naturally works for both directed and undirected graphs.
     let path = dijkstra(0, N - 1, &A);
     //  println!("Path: {path:#?}");
 
