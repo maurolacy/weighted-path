@@ -1,6 +1,9 @@
 #![allow(non_snake_case)]
 
 use std::collections::{BinaryHeap, HashMap};
+use fibonacci_heap::FibonacciHeap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 // code goes here
 // note: you are able to modify the parameter types
@@ -120,6 +123,7 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     // 2. Use Dijstra's to traverse the graph from the first node, and find
     // the shortest path to the last one.
     // Using adjacency list is more efficient for sparse graphs.
+    // Use binary heap by default (faster for most cases), Fibonacci heap available for benchmarking
     let path = dijkstra(0, N - 1, &graph);
     //  println!("Path: {path:#?}");
 
@@ -138,7 +142,8 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     Ok(path_parts.join("-"))
 }
 
-fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+// Expose for testing and benchmarking
+pub(crate) fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
@@ -168,6 +173,108 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize>
     }
 
     // Reconstruct path in reverse order to avoid reversing at the end
+    let mut path = Vec::new();
+    let mut current = end;
+
+    // Check if path exists
+    if distances[end] == u32::MAX {
+        return path; // No path found
+    }
+
+    // Build path backwards, then reverse once
+    while let Some(prev) = previous[current] {
+        path.push(current);
+        current = prev;
+    }
+    path.push(start);
+    path.reverse();
+    path
+}
+
+// Fibonacci heap version - potentially faster for dense graphs with many decrease_key operations
+// Time complexity: O(E + V log V) amortized vs O((V + E) log V) for binary heap
+// Note: The fibonacci_heap crate API is limited (extract_min only returns key, not node).
+// We work around this by maintaining a separate mapping and using peek + manual tracking.
+/// Fibonacci heap version - exposed for benchmarking
+pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+    let mut distances = vec![u32::MAX; graph.len()];
+    distances[start] = 0;
+    let mut previous = vec![None; graph.len()];
+
+    // Track handles for decrease_key operations
+    // Map from node_index to handle
+    let mut handles: Vec<Option<Rc<RefCell<fibonacci_heap::Node>>>> = vec![None; graph.len()];
+    // Map from (key, node_id_in_heap) to our node_index
+    // Since extract_min only gives us the key, we need to track which nodes have which keys
+    let mut active_nodes: HashMap<i32, Vec<usize>> = HashMap::new(); // key -> list of node indices with this key
+    let mut heap = FibonacciHeap::new();
+
+    // Insert start node
+    if let Ok(handle) = heap.insert(0) {
+        handles[start] = Some(handle);
+        active_nodes.entry(0).or_insert_with(Vec::new).push(start);
+    }
+
+    while let Some(min_key) = heap.peek_min() {
+        // Find a node with this minimum key that hasn't been processed
+        let node_opt = active_nodes.get_mut(&min_key).and_then(|nodes| {
+            nodes.pop().filter(|&idx| {
+                // Check if this node still has this distance (might have been updated)
+                distances[idx] == min_key as u32
+            })
+        });
+
+        let current_node = match node_opt {
+            Some(node) => node,
+            None => {
+                // No valid node with this key, extract and continue
+                heap.extract_min();
+                continue;
+            }
+        };
+
+        let current_distance = min_key as u32;
+
+        // Extract the min (we know it's this node's key)
+        heap.extract_min();
+        handles[current_node] = None;
+
+        // Early termination: if we've reached the target, we're done
+        if current_node == end {
+            break;
+        }
+
+        // Iterate only over actual neighbors (adjacency list)
+        for &(neighbor, weight) in &graph[current_node] {
+            let new_distance = current_distance + weight;
+            if new_distance < distances[neighbor] {
+                distances[neighbor] = new_distance;
+                previous[neighbor] = Some(current_node);
+
+                // Use decrease_key if node is already in heap, otherwise insert
+                if let Some(handle) = handles[neighbor].take() {
+                    let old_key = handle.borrow().key;
+                    // Remove from old key's list
+                    if let Some(nodes) = active_nodes.get_mut(&old_key) {
+                        nodes.retain(|&x| x != neighbor);
+                    }
+                    // Decrease key
+                    if heap.decrease_key(&handle, new_distance as i32).is_ok() {
+                        handles[neighbor] = Some(handle);
+                        active_nodes.entry(new_distance as i32).or_insert_with(Vec::new).push(neighbor);
+                    }
+                } else {
+                    // Insert new node
+                    if let Ok(handle) = heap.insert(new_distance as i32) {
+                        handles[neighbor] = Some(handle);
+                        active_nodes.entry(new_distance as i32).or_insert_with(Vec::new).push(neighbor);
+                    }
+                }
+            }
+        }
+    }
+
+    // Reconstruct path
     let mut path = Vec::new();
     let mut current = end;
 
@@ -308,6 +415,21 @@ mod tests {
         let input = vec!["0"];
         let result = GraphChallenge(input);
         assert_eq!(result, Ok("-1".to_string()));
+    }
+
+    #[test]
+    fn test_fibonacci_heap_simple() {
+        // Test that Fibonacci heap version produces same results as binary heap
+        let graph = vec![
+            vec![(1, 2), (2, 4)],  // node 0
+            vec![(0, 2), (3, 1)],  // node 1
+            vec![(0, 4), (3, 5)],  // node 2
+            vec![(1, 1), (2, 5)],  // node 3
+        ];
+        let path_binary = dijkstra(0, 3, &graph);
+        let path_fib = dijkstra_fibonacci(0, 3, &graph);
+        assert_eq!(path_binary, path_fib);
+        assert_eq!(path_binary, vec![0, 1, 3]);
     }
 
     #[test]

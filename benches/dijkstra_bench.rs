@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use std::fs;
-use weigthed_path::dijkstra::{GraphChallenge, GraphChallengeWithDirection};
+use weigthed_path::dijkstra::{GraphChallenge, GraphChallengeWithDirection, dijkstra_fibonacci};
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
     generate_test_graph_with_seed(num_nodes, edge_density, directed, None)
@@ -217,6 +217,68 @@ fn benchmark_reference(c: &mut Criterion) {
     group.finish();
 }
 
+// Benchmark comparing binary heap vs Fibonacci heap
+fn benchmark_heap_comparison(c: &mut Criterion) {
+    let mut group = c.benchmark_group("heap_comparison");
+
+    // Test with different graph sizes and densities
+    let test_cases = vec![
+        (500, 0.1, "sparse_500"),
+        (1000, 0.1, "sparse_1000"),
+        (500, 0.3, "dense_500"),
+        (1000, 0.3, "dense_1000"),
+    ];
+
+    for (nodes, density, name) in test_cases {
+        let graph = generate_test_graph_with_seed(nodes, density, false, Some(42));
+        let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
+
+        // Build adjacency list for direct dijkstra calls
+        let mut adj_list = vec![Vec::new(); nodes];
+        for line in graph.iter().skip(1 + nodes) {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() == 3 {
+                if let (Some(i_str), Some(j_str)) = (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node")) {
+                    if let (Ok(i), Ok(j), Ok(w)) = (
+                        i_str.parse::<usize>(),
+                        j_str.parse::<usize>(),
+                        parts[2].parse::<u32>(),
+                    ) {
+                        if i < nodes && j < nodes {
+                            adj_list[i].push((j, w));
+                            adj_list[j].push((i, w)); // bidirectional
+                        }
+                    }
+                }
+            }
+        }
+
+        // Benchmark binary heap (via GraphChallenge)
+        group.bench_with_input(
+            BenchmarkId::new("binary_heap", name),
+            &graph_refs,
+            |b, graph| {
+                b.iter(|| {
+                    black_box(GraphChallenge(black_box(graph.clone())))
+                })
+            },
+        );
+
+        // Benchmark Fibonacci heap
+        group.bench_with_input(
+            BenchmarkId::new("fibonacci_heap", name),
+            &adj_list,
+            |b, graph| {
+                b.iter(|| {
+                    black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph)))
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     benchmark_graph_parsing,
@@ -233,4 +295,10 @@ criterion_group!(
     benchmark_reference
 );
 
-criterion_main!(benches, reference);
+// Heap comparison benchmark group
+criterion_group!(
+    heap_compare,
+    benchmark_heap_comparison
+);
+
+criterion_main!(benches, reference, heap_compare);
