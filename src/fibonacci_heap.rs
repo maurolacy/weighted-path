@@ -299,3 +299,138 @@ impl Drop for FibonacciHeap {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_heap() {
+        let mut heap = FibonacciHeap::new();
+        assert!(heap.is_empty());
+        assert_eq!(heap.extract_min(), None);
+    }
+
+    #[test]
+    fn test_insert_and_extract_min() {
+        let mut heap = FibonacciHeap::new();
+        let _handle1 = heap.insert(10, 1);
+        let _handle2 = heap.insert(5, 2);
+        let _handle3 = heap.insert(15, 3);
+
+        assert!(!heap.is_empty());
+        assert_eq!(heap.extract_min(), Some((5, 2)));
+        assert_eq!(heap.extract_min(), Some((10, 1)));
+        assert_eq!(heap.extract_min(), Some((15, 3)));
+        assert_eq!(heap.extract_min(), None);
+        assert!(heap.is_empty());
+    }
+
+    #[test]
+    fn test_decrease_key() {
+        let mut heap = FibonacciHeap::new();
+        let _handle1 = heap.insert(10, 1);
+        let handle2 = heap.insert(20, 2);
+        let _handle3 = heap.insert(30, 3);
+
+        // Decrease key of handle2 from 20 to 5
+        assert!(heap.decrease_key(handle2, 5));
+        assert_eq!(heap.extract_min(), Some((5, 2))); // handle2 should now be min
+        assert_eq!(heap.extract_min(), Some((10, 1)));
+        assert_eq!(heap.extract_min(), Some((30, 3)));
+    }
+
+    #[test]
+    fn test_decrease_key_invalid() {
+        let mut heap = FibonacciHeap::new();
+        let handle = heap.insert(10, 1);
+
+        // Can't increase key
+        assert!(!heap.decrease_key(handle, 20));
+        assert_eq!(heap.extract_min(), Some((10, 1)));
+    }
+
+    #[test]
+    fn test_decrease_key_null_pointer() {
+        let mut heap = FibonacciHeap::new();
+        assert!(!heap.decrease_key(ptr::null_mut(), 5));
+    }
+
+    #[test]
+    fn test_multiple_decrease_keys() {
+        let mut heap = FibonacciHeap::new();
+        let handles: Vec<*mut Node> = (0..10)
+            .map(|i| heap.insert(((i + 1) * 10) as u32, i))
+            .collect();
+
+        // Decrease all keys
+        for (i, &handle) in handles.iter().enumerate() {
+            assert!(heap.decrease_key(handle, i as u32));
+        }
+
+        // Should extract in order 0, 1, 2, ...
+        for i in 0..10 {
+            assert_eq!(heap.extract_min(), Some((i as u32, i)));
+        }
+    }
+
+    #[test]
+    fn test_cascading_cuts() {
+        let mut heap = FibonacciHeap::new();
+        // Insert nodes to create a tree structure
+        let _handles: Vec<*mut Node> = (0..20).map(|i| heap.insert((i * 10) as u32, i)).collect();
+
+        // Extract a few to create tree structure
+        heap.extract_min();
+        heap.extract_min();
+
+        // Re-insert some nodes to create tree structure, then decrease keys
+        let handle1 = heap.insert(50, 5);
+        let handle2 = heap.insert(100, 10);
+        let handle3 = heap.insert(150, 15);
+
+        // Extract one more to create parent-child relationships
+        heap.extract_min();
+
+        // Decrease keys to trigger cascading cuts
+        assert!(heap.decrease_key(handle1, 1));
+        assert!(heap.decrease_key(handle2, 2));
+        assert!(heap.decrease_key(handle3, 3));
+
+        // Verify we can still extract correctly
+        let mut results = Vec::new();
+        while let Some(result) = heap.extract_min() {
+            results.push(result);
+        }
+        // Should contain our decreased keys
+        assert!(results.iter().any(|&(k, _)| k == 1 || k == 2 || k == 3));
+    }
+
+    #[test]
+    fn test_large_heap() {
+        let mut heap = FibonacciHeap::new();
+        let n = 1000;
+        let _handles: Vec<*mut Node> = (0..n).map(|i| heap.insert(i as u32, i)).collect();
+
+        // Extract all in order
+        for i in 0..n {
+            assert_eq!(heap.extract_min(), Some((i as u32, i)));
+        }
+        assert!(heap.is_empty());
+    }
+
+    #[test]
+    fn test_decrease_key_after_extract() {
+        let mut heap = FibonacciHeap::new();
+        let _handle1 = heap.insert(10, 1);
+        let handle2 = heap.insert(20, 2);
+
+        heap.extract_min(); // Extract handle1
+
+        // handle1 is now invalid, but we can't easily test this without UB
+        // The decrease_key should fail gracefully or we should track validity
+        // For now, we'll just verify handle2 still works
+        assert!(heap.decrease_key(handle2, 5));
+        assert_eq!(heap.extract_min(), Some((5, 2)));
+    }
+}
