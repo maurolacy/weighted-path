@@ -1,0 +1,9 @@
+4
+Node1
+Node2
+Node3
+Node4
+Node1|Node2|100
+Node1|Node3|1
+Node3|Node4|1
+Node2|Node4|1

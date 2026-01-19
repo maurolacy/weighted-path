@@ -1,0 +1,17 @@
+7
+One
+Two
+Three
+Four
+Five
+Six
+Seven
+One|Two|5
+One|Three|3
+Two|Four|2
+Three|Four|1
+Three|Five|4
+Four|Six|3
+Five|Six|2
+Six|Seven|1
+Two|Seven|15

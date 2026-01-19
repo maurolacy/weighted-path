@@ -1,0 +1,13 @@
+5
+Start
+A
+B
+C
+End
+Start|A|1
+Start|B|10
+A|B|2
+A|C|5
+B|C|1
+C|End|1
+B|End|20
