@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use weigthed_path::dijkstra::{GraphChallenge, GraphChallengeWithDirection, dijkstra_fibonacci};
 
@@ -6,7 +6,12 @@ fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> V
     generate_test_graph_with_seed(num_nodes, edge_density, directed, None)
 }
 
-fn generate_test_graph_with_seed(num_nodes: usize, edge_density: f64, directed: bool, seed: Option<u64>) -> Vec<String> {
+fn generate_test_graph_with_seed(
+    num_nodes: usize,
+    edge_density: f64,
+    directed: bool,
+    seed: Option<u64>,
+) -> Vec<String> {
     let mut lines = Vec::new();
     lines.push(num_nodes.to_string());
 
@@ -79,11 +84,7 @@ fn benchmark_dijkstra_algorithm(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(GraphChallenge(black_box(graph.clone())))
-                })
-            },
+            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
         );
     }
 
@@ -101,11 +102,7 @@ fn benchmark_different_densities(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("density", format!("{:.2}", density)),
             &graph_refs,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(GraphChallenge(black_box(graph.clone())))
-                })
-            },
+            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
         );
     }
 
@@ -129,11 +126,7 @@ fn benchmark_real_world_graphs(c: &mut Criterion) {
             group.bench_with_input(
                 BenchmarkId::from_parameter(file_path),
                 &lines,
-                |b, graph| {
-                    b.iter(|| {
-                        black_box(GraphChallenge(black_box(graph.clone())))
-                    })
-                },
+                |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
             );
         }
     }
@@ -155,9 +148,7 @@ fn benchmark_directed_vs_undirected(c: &mut Criterion) {
         BenchmarkId::new("graph_type", "undirected"),
         &graph_refs,
         |b, graph| {
-            b.iter(|| {
-                black_box(GraphChallengeWithDirection(black_box(graph.clone()), true))
-            })
+            b.iter(|| black_box(GraphChallengeWithDirection(black_box(graph.clone()), true)))
         },
     );
 
@@ -166,9 +157,7 @@ fn benchmark_directed_vs_undirected(c: &mut Criterion) {
         BenchmarkId::new("graph_type", "directed"),
         &graph_refs,
         |b, graph| {
-            b.iter(|| {
-                black_box(GraphChallengeWithDirection(black_box(graph.clone()), false))
-            })
+            b.iter(|| black_box(GraphChallengeWithDirection(black_box(graph.clone()), false)))
         },
     );
 
@@ -186,11 +175,7 @@ fn benchmark_directed_different_sizes(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(GraphChallenge(black_box(graph.clone())))
-                })
-            },
+            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
         );
     }
 
@@ -209,9 +194,7 @@ fn benchmark_reference(c: &mut Criterion) {
     let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
 
     group.bench_function("500_nodes_10pct_density", |b| {
-        b.iter(|| {
-            black_box(GraphChallenge(black_box(graph_refs.clone())))
-        })
+        b.iter(|| black_box(GraphChallenge(black_box(graph_refs.clone()))))
     });
 
     group.finish();
@@ -238,7 +221,9 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
         for line in graph.iter().skip(1 + nodes) {
             let parts: Vec<&str> = line.split('|').collect();
             if parts.len() == 3 {
-                if let (Some(i_str), Some(j_str)) = (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node")) {
+                if let (Some(i_str), Some(j_str)) =
+                    (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
+                {
                     if let (Ok(i), Ok(j), Ok(w)) = (
                         i_str.parse::<usize>(),
                         j_str.parse::<usize>(),
@@ -257,11 +242,7 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("binary_heap", name),
             &graph_refs,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(GraphChallenge(black_box(graph.clone())))
-                })
-            },
+            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
         );
 
         // Benchmark Fibonacci heap
@@ -269,9 +250,7 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
             BenchmarkId::new("fibonacci_heap", name),
             &adj_list,
             |b, graph| {
-                b.iter(|| {
-                    black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph)))
-                })
+                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
             },
         );
     }
@@ -290,15 +269,9 @@ criterion_group!(
 );
 
 // Reference benchmark group for quick checks
-criterion_group!(
-    reference,
-    benchmark_reference
-);
+criterion_group!(reference, benchmark_reference);
 
 // Heap comparison benchmark group
-criterion_group!(
-    heap_compare,
-    benchmark_heap_comparison
-);
+criterion_group!(heap_compare, benchmark_heap_comparison);
 
 criterion_main!(benches, reference, heap_compare);

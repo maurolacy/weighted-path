@@ -25,7 +25,10 @@ fn main() {
 
     let edge_density: f64 = arg_iter
         .next()
-        .map(|s| s.parse::<f64>().expect("Edge density must be a number between 0.0 and 1.0"))
+        .map(|s| {
+            s.parse::<f64>()
+                .expect("Edge density must be a number between 0.0 and 1.0")
+        })
         .unwrap_or(0.1)
         .clamp(0.0, 1.0);
 
@@ -33,8 +36,7 @@ fn main() {
 
     let mut output: Box<dyn Write> = match output_file {
         Some(path) => Box::new(
-            std::fs::File::create(path)
-                .expect(&format!("Failed to create file: {}", path))
+            std::fs::File::create(path).expect(&format!("Failed to create file: {}", path)),
         ),
         None => Box::new(io::stdout()),
     };
@@ -76,10 +78,23 @@ fn main() {
         }
     }
 
-    let graph_type = if is_directed { "directed" } else { "undirected" };
-    if output_file.is_none() {
-        eprintln!("\nGenerated {} graph with {} nodes and {} edges", graph_type, num_nodes, edge_count);
+    let graph_type = if is_directed {
+        "directed"
     } else {
-        eprintln!("Generated {} graph with {} nodes and {} edges to {}", graph_type, num_nodes, edge_count, output_file.unwrap());
+        "undirected"
+    };
+    if output_file.is_none() {
+        eprintln!(
+            "\nGenerated {} graph with {} nodes and {} edges",
+            graph_type, num_nodes, edge_count
+        );
+    } else {
+        eprintln!(
+            "Generated {} graph with {} nodes and {} edges to {}",
+            graph_type,
+            num_nodes,
+            edge_count,
+            output_file.unwrap()
+        );
     }
 }

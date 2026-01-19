@@ -48,6 +48,9 @@ impl FibonacciHeap {
         }
     }
 
+    /// Insert a new node into the heap.
+    /// Returns a raw pointer to the node (handle) for use with decrease_key.
+    /// The pointer is valid until the node is extracted or the heap is dropped.
     pub fn insert(&mut self, key: u32, node_id: usize) -> *mut Node {
         let node = Box::into_raw(Box::new(Node::new(key, node_id)));
         unsafe {
@@ -77,6 +80,8 @@ impl FibonacciHeap {
         (*min_left).right = node;
     }
 
+    /// Extract the minimum element from the heap.
+    /// Returns (key, node_id) of the minimum element, or None if heap is empty.
     pub fn extract_min(&mut self) -> Option<(u32, usize)> {
         if self.min.is_null() {
             return None;
@@ -190,6 +195,17 @@ impl FibonacciHeap {
         (*y).marked = false;
     }
 
+    /// Decrease the key of a node in the heap.
+    ///
+    /// # Safety
+    /// The `node` pointer must be a valid handle returned by `insert()` and not yet extracted.
+    ///
+    /// # Arguments
+    /// * `node` - A valid handle returned by `insert()`
+    /// * `new_key` - The new (smaller) key value
+    ///
+    /// # Returns
+    /// `true` if the key was successfully decreased, `false` if the new key is not smaller.
     pub fn decrease_key(&mut self, node: *mut Node, new_key: u32) -> bool {
         if node.is_null() {
             return false;
@@ -219,14 +235,14 @@ impl FibonacciHeap {
     unsafe fn cut(&mut self, node: *mut Node, parent: *mut Node) {
         // Remove node from parent's child list
         if (*node).right == node {
-                (*parent).child = ptr::null_mut();
-            } else {
-                (*(*node).left).right = (*node).right;
-                (*(*node).right).left = (*node).left;
-                if (*parent).child == node {
-                    (*parent).child = (*node).right;
-                }
+            (*parent).child = ptr::null_mut();
+        } else {
+            (*(*node).left).right = (*node).right;
+            (*(*node).right).left = (*node).left;
+            if (*parent).child == node {
+                (*parent).child = (*node).right;
             }
+        }
 
         (*parent).degree -= 1;
         (*node).parent = ptr::null_mut();
@@ -248,6 +264,7 @@ impl FibonacciHeap {
         }
     }
 
+    /// Check if the heap is empty.
     pub fn is_empty(&self) -> bool {
         self.min.is_null()
     }

@@ -18,9 +18,7 @@ fn main() {
 
 fn run() -> Result<(), String> {
     // First argument is the file to read
-    let file_path = args()
-        .nth(1)
-        .ok_or("Usage: weighted_path <input_file>")?;
+    let file_path = args().nth(1).ok_or("Usage: weighted_path <input_file>")?;
 
     let file = File::open(&file_path)
         .map_err(|e| format!("Failed to open file '{}': {}", file_path, e))?;

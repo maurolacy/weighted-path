@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
-use std::collections::{BinaryHeap, HashMap};
 use crate::fibonacci_heap::{FibonacciHeap, Node};
+use std::collections::{BinaryHeap, HashMap};
 
 // code goes here
 // note: you are able to modify the parameter types
@@ -16,7 +16,10 @@ pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
 /// * `bidirectional` - If true, edges are made bidirectional (undirected graph).
 ///                     If false, edges are one-way only (directed graph).
 ///                     When true, if both A->B and B->A are specified, the last weight wins.
-pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Result<String, String> {
+pub fn GraphChallengeWithDirection(
+    lines: Vec<&str>,
+    bidirectional: bool,
+) -> Result<String, String> {
     //  println!("{:?}", lines);
 
     // 1. Parse the graph and build and adjacency matrix.
@@ -25,9 +28,12 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     }
 
     // Number of nodes
-    let N = lines[0]
-        .parse::<u32>()
-        .map_err(|_| format!("Invalid number of nodes: '{}' (expected a positive integer)", lines[0]))? as usize;
+    let N = lines[0].parse::<u32>().map_err(|_| {
+        format!(
+            "Invalid number of nodes: '{}' (expected a positive integer)",
+            lines[0]
+        )
+    })? as usize;
 
     if N == 0 {
         return Ok("-1".to_string());
@@ -63,7 +69,8 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     }
 
     if N == 1 {
-        return Ok(nodes_reverse.get(&0)
+        return Ok(nodes_reverse
+            .get(&0)
             .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
             .to_string());
     }
@@ -94,19 +101,33 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
         let weight_str = parts[2].trim();
 
         // Validate node names exist
-        let node_1_index = nodes.get(node_1)
-            .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_1))?;
-        let node_2_index = nodes.get(node_2)
-            .ok_or_else(|| format!("Node '{}' in edge definition not found in node list", node_2))?;
+        let node_1_index = nodes.get(node_1).ok_or_else(|| {
+            format!(
+                "Node '{}' in edge definition not found in node list",
+                node_1
+            )
+        })?;
+        let node_2_index = nodes.get(node_2).ok_or_else(|| {
+            format!(
+                "Node '{}' in edge definition not found in node list",
+                node_2
+            )
+        })?;
 
         // Validate weight
-        let weight = weight_str
-            .parse::<u32>()
-            .map_err(|_| format!("Invalid weight '{}' in edge '{}|{}|{}' (expected a positive integer)", weight_str, node_1, node_2, weight_str))?;
+        let weight = weight_str.parse::<u32>().map_err(|_| {
+            format!(
+                "Invalid weight '{}' in edge '{}|{}|{}' (expected a positive integer)",
+                weight_str, node_1, node_2, weight_str
+            )
+        })?;
 
         // Check for self-loops (optional validation)
         if node_1_index == node_2_index {
-            return Err(format!("Self-loop detected: node '{}' connected to itself", node_1));
+            return Err(format!(
+                "Self-loop detected: node '{}' connected to itself",
+                node_1
+            ));
         }
 
         // Add edge to adjacency list
@@ -133,8 +154,12 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     // Map path node ids to nodes - optimized string building
     let mut path_parts = Vec::with_capacity(path.len());
     for node_id in path {
-        let node = nodes_reverse.get(&node_id)
-            .ok_or_else(|| format!("Internal error: node ID {} not found in reverse map", node_id))?;
+        let node = nodes_reverse.get(&node_id).ok_or_else(|| {
+            format!(
+                "Internal error: node ID {} not found in reverse map",
+                node_id
+            )
+        })?;
         path_parts.push(*node);
     }
     Ok(path_parts.join("-"))
@@ -257,13 +282,6 @@ pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>])
     path
 }
 
-// keep this function call here
-/*
-fn main() {
-  GraphChallenge(coderbyteInternalStdinFunction(io::stdin()));
-}
-*/
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -305,7 +323,9 @@ mod tests {
     #[test]
     fn test_shortest_path_through_intermediate() {
         // Direct path A->D costs 100, but A->B->C->D costs 1+1+1=3
-        let input = vec!["4", "A", "B", "C", "D", "A|B|1", "B|C|1", "C|D|1", "A|D|100"];
+        let input = vec![
+            "4", "A", "B", "C", "D", "A|B|1", "B|C|1", "C|D|1", "A|D|100",
+        ];
         let result = GraphChallenge(input);
         assert_eq!(result, Ok("A-B-C-D".to_string()));
     }
@@ -385,10 +405,10 @@ mod tests {
     fn test_fibonacci_heap_simple() {
         // Test that Fibonacci heap version produces same results as binary heap
         let graph = vec![
-            vec![(1, 2), (2, 4)],  // node 0
-            vec![(0, 2), (3, 1)],  // node 1
-            vec![(0, 4), (3, 5)],  // node 2
-            vec![(1, 1), (2, 5)],  // node 3
+            vec![(1, 2), (2, 4)], // node 0
+            vec![(0, 2), (3, 1)], // node 1
+            vec![(0, 4), (3, 5)], // node 2
+            vec![(1, 1), (2, 5)], // node 3
         ];
         let path_binary = dijkstra(0, 3, &graph);
         let path_fib = dijkstra_fibonacci(0, 3, &graph);
@@ -401,7 +421,12 @@ mod tests {
         // Comprehensive test comparing both implementations on various graphs
         let test_cases = vec![
             // Simple path
-            (vec![vec![(1, 1)], vec![(2, 1)], vec![]], 0, 2, vec![0, 1, 2]),
+            (
+                vec![vec![(1, 1)], vec![(2, 1)], vec![]],
+                0,
+                2,
+                vec![0, 1, 2],
+            ),
             // Disconnected nodes
             (vec![vec![], vec![]], 0, 1, vec![]),
             // Single node
@@ -409,11 +434,11 @@ mod tests {
             // Complex graph
             (
                 vec![
-                    vec![(1, 4), (2, 2)],      // node 0
-                    vec![(2, 1), (3, 5)],     // node 1
+                    vec![(1, 4), (2, 2)],          // node 0
+                    vec![(2, 1), (3, 5)],          // node 1
                     vec![(1, 1), (3, 8), (4, 10)], // node 2
-                    vec![(4, 2)],             // node 3
-                    vec![],                   // node 4
+                    vec![(4, 2)],                  // node 3
+                    vec![],                        // node 4
                 ],
                 0,
                 4,
@@ -422,10 +447,10 @@ mod tests {
             // Graph with multiple paths
             (
                 vec![
-                    vec![(1, 1), (2, 5)],     // node 0
-                    vec![(2, 1), (3, 2)],     // node 1
-                    vec![(3, 3)],             // node 2
-                    vec![],                   // node 3
+                    vec![(1, 1), (2, 5)], // node 0
+                    vec![(2, 1), (3, 2)], // node 1
+                    vec![(3, 3)],         // node 2
+                    vec![],               // node 3
                 ],
                 0,
                 3,
@@ -507,10 +532,7 @@ mod tests {
                     );
                 }
                 Err(e) => {
-                    panic!(
-                        "input{}.txt should succeed but got error: {}",
-                        i, e
-                    );
+                    panic!("input{}.txt should succeed but got error: {}", i, e);
                 }
             }
         }
