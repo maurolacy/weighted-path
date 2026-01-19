@@ -170,16 +170,21 @@ Benchmark results are saved in `target/criterion/` and include HTML reports with
 ### Performance Characteristics
 
 The current implementation uses:
-- **Adjacency matrix**: O(V²) space complexity where V is the number of vertices
-- **Dijkstra's algorithm**: O(V²) time complexity with the current implementation
+- **Adjacency list**: O(V + E) space complexity where V is vertices and E is edges (much better for sparse graphs)
+- **Dijkstra's algorithm**: O((V + E) log V) time complexity with binary heap
 - **Binary heap priority queue**: Used for efficient minimum distance extraction
 
 **Performance Optimizations:**
+- **Adjacency list**: Only stores actual edges, not empty slots. Much more efficient for sparse graphs (typical case)
 - **Early termination**: Algorithm stops immediately when the target node is reached
 - **Optimized string building**: Uses `join()` instead of repeated `format!()` calls
-- **Efficient priority queue**: Uses `Reverse` wrapper for proper min-heap behavior
+- **Efficient priority queue**: Uses `Reverse` wrapper to convert BinaryHeap (max-heap) into a min-heap (zero-cost in release builds)
+
+**Space Comparison:**
+- **Adjacency matrix**: O(V²) - always allocates space for all possible edges
+- **Adjacency list**: O(V + E) - only stores actual edges
+- For a sparse graph with 1000 nodes and 5000 edges: matrix = 1M entries, list = 6000 entries
 
 For very large graphs (10,000+ nodes), consider:
-- Using an adjacency list instead of a matrix for sparse graphs
-- Implementing a more efficient priority queue (e.g., Fibonacci heap)
+- Implementing a more efficient priority queue (e.g., Fibonacci heap) for better time complexity
 - Parallelizing graph construction for very large inputs

@@ -67,9 +67,9 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
             .to_string());
     }
 
-    // Build the adjacency matrix
-    let A_line = vec![u32::MAX; N];
-    let mut A = vec![A_line; N];
+    // Build the adjacency list: Vec<Vec<(neighbor_index, weight)>>
+    // More space-efficient for sparse graphs: O(V + E) instead of O(V²)
+    let mut graph = vec![Vec::new(); N];
 
     for (line_num, line) in lines.iter().skip(1 + N).enumerate() {
         let line = line.trim();
@@ -108,22 +108,19 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
             return Err(format!("Self-loop detected: node '{}' connected to itself", node_1));
         }
 
-        // Set edge in the specified direction
-        A[*node_1_index][*node_2_index] = weight;
+        // Add edge to adjacency list
+        graph[*node_1_index].push((*node_2_index, weight));
 
-        // If bidirectional is true, also set the reverse edge
-        // If reverse edge already exists with different weight, it will be overwritten
+        // If bidirectional is true, also add the reverse edge
         if bidirectional {
-            A[*node_2_index][*node_1_index] = weight;
+            graph[*node_2_index].push((*node_1_index, weight));
         }
     }
-    //  println!("{A:#?}");
 
     // 2. Use Dijstra's to traverse the graph from the first node, and find
     // the shortest path to the last one.
-    // Edges are stored bidirectionally in the adjacency matrix for convenience.
-    // The algorithm naturally works for both directed and undirected graphs.
-    let path = dijkstra(0, N - 1, &A);
+    // Using adjacency list is more efficient for sparse graphs.
+    let path = dijkstra(0, N - 1, &graph);
     //  println!("Path: {path:#?}");
 
     // 3. Return the shortest path; if no shortest path found, return -1.
@@ -141,7 +138,7 @@ pub fn GraphChallengeWithDirection(lines: Vec<&str>, bidirectional: bool) -> Res
     Ok(path_parts.join("-"))
 }
 
-fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
+fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
@@ -159,10 +156,8 @@ fn dijkstra(start: usize, end: usize, graph: &[Vec<u32>]) -> Vec<usize> {
             continue;
         }
 
-        for (neighbor, weight) in graph[current_node].iter().enumerate() {
-            if *weight == u32::MAX {
-                continue;
-            }
+        // Iterate only over actual neighbors (adjacency list)
+        for &(neighbor, weight) in &graph[current_node] {
             let new_distance = current_distance + weight;
             if new_distance < distances[neighbor] {
                 distances[neighbor] = new_distance;
