@@ -1,0 +1,1 @@
+Graph processing error: Invalid weight 'abc' in edge 'A|B|abc' (expected a positive integer)

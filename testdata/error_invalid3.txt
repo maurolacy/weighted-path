@@ -1,0 +1,1 @@
+Graph processing error: Invalid edge format at line 4: 'A|B' (expected format: node1|node2|weight)
