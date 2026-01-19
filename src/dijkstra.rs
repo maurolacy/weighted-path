@@ -33,11 +33,13 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     let A_line = vec![u32::MAX; N];
     let mut A = vec![A_line; N];
     for line in lines.iter().skip(1 + N) {
-        let (node_1, node_2_weight) = line.split_at(line.find("|").unwrap());
-        let (node_2, weight) = node_2_weight[1..].split_at(node_2_weight[1..].find("|").unwrap());
-        let weight = weight[1..].parse::<u32>().unwrap();
-        let node_1_index = nodes.get(&node_1).unwrap();
-        let node_2_index = nodes.get(&node_2).unwrap();
+        // Split the line into node 1, node 2, and weight
+        let mut splits = line.split("|");
+        let node_1 = splits.next().unwrap();
+        let node_2 = splits.next().unwrap();
+        let weight = splits.next().unwrap().parse::<u32>().unwrap();
+        let node_1_index = nodes.get(node_1).unwrap();
+        let node_2_index = nodes.get(node_2).unwrap();
         A[*node_1_index][*node_2_index] = weight;
         A[*node_2_index][*node_1_index] = weight; // Bi-directional edges
     }
