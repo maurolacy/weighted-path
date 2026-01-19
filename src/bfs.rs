@@ -14,7 +14,7 @@ use std::collections::VecDeque;
 // code goes here
 // note: you are able to modify the parameter types
 pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
-  println!("{:?}", lines);
+//  println!("{:?}", lines);
 
   // 1. Parse the graph and build and adjacency matrix.
   if lines.len() == 0 {
@@ -45,12 +45,12 @@ pub(crate) fn GraphChallenge(lines: Vec<&str>) -> String {
     A[*node_1_index][*node_2_index] = weight;
     A[*node_2_index][*node_1_index] = weight; // Bi-directional edges
   }
-  println!("{A:#?}");
+//  println!("{A:#?}");
 
   // 2. Use DFS of BFS (preferred) to traverse the graph form the first node, and find
   // the shortest path to the last one.
   let path = bfs(0, (N-1) as u32, &A);
-  println!("Path: {path:#?}");
+//  println!("Path: {path:#?}");
  
   // 3. Return the shortest path; if no shortest path found, return -1.
   if path.len() == 0 {
@@ -112,7 +112,7 @@ fn bfs(from: u32, to: u32, v: &Vec<Vec<u32>>) -> Vec<u32> {
     path.push(p);
 
     while p != from {
-        println!("visited[{p}]: {:#?}", visited[p as usize]);
+//        println!("visited[{p}]: {:#?}", visited[p as usize]);
         p = visited[p as usize].0;
         path.push(p);
     }
