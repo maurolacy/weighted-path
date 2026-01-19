@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]
 
-mod dijkstra;
-
 use std::{
     env::args,
     fs::File,
@@ -9,7 +7,7 @@ use std::{
     process,
 };
 
-use dijkstra::GraphChallenge;
+use weigthed_path::dijkstra::GraphChallenge;
 
 fn main() {
     if let Err(e) = run() {

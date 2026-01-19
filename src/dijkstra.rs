@@ -4,7 +4,7 @@ use std::collections::{BinaryHeap, HashMap};
 
 // code goes here
 // note: you are able to modify the parameter types
-pub(crate) fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
+pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
     //  println!("{:?}", lines);
 
     // 1. Parse the graph and build and adjacency matrix.
