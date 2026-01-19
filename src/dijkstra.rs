@@ -14,8 +14,8 @@ pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
 /// # Arguments
 /// * `lines` - Graph definition lines (same format as GraphChallenge)
 /// * `bidirectional` - If true, edges are made bidirectional (undirected graph).
-///                     If false, edges are one-way only (directed graph).
-///                     When true, if both A->B and B->A are specified, the last weight wins.
+///   If false, edges are one-way only (directed graph).
+///   When true, if both A->B and B->A are specified, the last weight wins.
 pub fn GraphChallengeWithDirection(
     lines: Vec<&str>,
     bidirectional: bool,
