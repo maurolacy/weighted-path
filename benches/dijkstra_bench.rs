@@ -1,6 +1,8 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
-use weigthed_path::dijkstra::{GraphChallenge, GraphChallengeWithDirection, dijkstra_fibonacci};
+use weigthed_path::dijkstra::{
+    dijkstra_fibonacci, find_shortest_path, find_shortest_path_directed,
+};
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
     generate_test_graph_with_seed(num_nodes, edge_density, directed, None)
@@ -65,7 +67,7 @@ fn benchmark_graph_parsing(c: &mut Criterion) {
             |b, graph| {
                 b.iter(|| {
                     // Just parse, don't run algorithm
-                    black_box(GraphChallenge(black_box(graph.clone())))
+                    black_box(find_shortest_path(black_box(graph.clone())))
                 })
             },
         );
@@ -84,7 +86,7 @@ fn benchmark_dijkstra_algorithm(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
         );
     }
 
@@ -102,7 +104,7 @@ fn benchmark_different_densities(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("density", format!("{:.2}", density)),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
         );
     }
 
@@ -126,7 +128,7 @@ fn benchmark_real_world_graphs(c: &mut Criterion) {
             group.bench_with_input(
                 BenchmarkId::from_parameter(file_path),
                 &lines,
-                |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
+                |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
             );
         }
     }
@@ -148,7 +150,7 @@ fn benchmark_directed_vs_undirected(c: &mut Criterion) {
         BenchmarkId::new("graph_type", "undirected"),
         &graph_refs,
         |b, graph| {
-            b.iter(|| black_box(GraphChallengeWithDirection(black_box(graph.clone()), true)))
+            b.iter(|| black_box(find_shortest_path_directed(black_box(graph.clone()), true)))
         },
     );
 
@@ -157,7 +159,7 @@ fn benchmark_directed_vs_undirected(c: &mut Criterion) {
         BenchmarkId::new("graph_type", "directed"),
         &graph_refs,
         |b, graph| {
-            b.iter(|| black_box(GraphChallengeWithDirection(black_box(graph.clone()), false)))
+            b.iter(|| black_box(find_shortest_path_directed(black_box(graph.clone()), false)))
         },
     );
 
@@ -175,7 +177,7 @@ fn benchmark_directed_different_sizes(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
         );
     }
 
@@ -194,7 +196,7 @@ fn benchmark_reference(c: &mut Criterion) {
     let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
 
     group.bench_function("500_nodes_10pct_density", |b| {
-        b.iter(|| black_box(GraphChallenge(black_box(graph_refs.clone()))))
+        b.iter(|| black_box(find_shortest_path(black_box(graph_refs.clone()))))
     });
 
     group.finish();
@@ -236,11 +238,11 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
             }
         }
 
-        // Benchmark binary heap (via GraphChallenge)
+        // Benchmark binary heap (via find_shortest_path)
         group.bench_with_input(
             BenchmarkId::new("binary_heap", name),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(GraphChallenge(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
         );
 
         // Benchmark Fibonacci heap

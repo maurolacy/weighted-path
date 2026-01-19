@@ -7,7 +7,7 @@ use std::{
     process,
 };
 
-use weigthed_path::dijkstra::GraphChallenge;
+use weigthed_path::dijkstra::find_shortest_path;
 
 fn main() {
     if let Err(e) = run() {
@@ -29,8 +29,8 @@ fn run() -> Result<(), String> {
         .collect::<Result<Vec<String>, io::Error>>()
         .map_err(|e| format!("Failed to read file: {}", e))?;
 
-    // Call the GraphChallenge function
-    let result = GraphChallenge(lines.iter().map(|line| line.as_str()).collect())
+    // Find the shortest path
+    let result = find_shortest_path(lines.iter().map(|line| line.as_str()).collect())
         .map_err(|e| format!("Graph processing error: {}", e))?;
 
     // Print the result

@@ -139,8 +139,8 @@ cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
 
 **Note on Directed vs Undirected:**
 - **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both A→B and B→A are created with weight `w`.
-- **Directed graphs**: The `GraphChallengeWithDirection` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
-- **Input format**: The same input can be processed as either directed or undirected by using `GraphChallengeWithDirection(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created (overwriting any existing reverse edges with the same weight).
+- **Directed graphs**: The `find_shortest_path_directed` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
+- **Input format**: The same input can be processed as either directed or undirected by using `find_shortest_path_directed(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created (overwriting any existing reverse edges with the same weight).
 - **Benchmarking**: This allows testing the same graph structure in both modes for fair performance comparison. The benchmark suite includes a `directed_vs_undirected` benchmark that tests the same graph with both settings.
 - **Performance**: Directed graphs typically have fewer edges (only forward direction), while undirected graphs have symmetric edges. The same input processed as undirected will have more edges and may be slightly slower.
 

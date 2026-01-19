@@ -218,6 +218,7 @@ impl FibonacciHeap {
     /// All internal pointer operations are safe because we control the heap structure.
     ///
     /// # Arguments
+    ///
     /// * `node` - A valid handle returned by `insert()`
     /// * `new_key` - The new (smaller) key value
     ///

@@ -1,22 +1,33 @@
-#![allow(non_snake_case)]
-
 use crate::fibonacci_heap::{FibonacciHeap, Node};
 use std::collections::{BinaryHeap, HashMap};
 
-// code goes here
-// note: you are able to modify the parameter types
-pub fn GraphChallenge(lines: Vec<&str>) -> Result<String, String> {
-    GraphChallengeWithDirection(lines, true) // Default to undirected/bidirectional
-}
-
-/// Process graph with explicit control over edge directionality.
+/// Find the shortest path in a weighted graph using Dijkstra's algorithm.
+///
+/// This is a convenience function that treats the graph as undirected (bidirectional edges).
 ///
 /// # Arguments
-/// * `lines` - Graph definition lines (same format as GraphChallenge)
-/// * `bidirectional` - If true, edges are made bidirectional (undirected graph).
-///   If false, edges are one-way only (directed graph).
-///   When true, if both A->B and B->A are specified, the last weight wins.
-pub fn GraphChallengeWithDirection(
+/// * `lines` - Graph definition lines (see README for format)
+///
+/// # Returns
+/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
+/// * `Err(message)` - Error message if input is invalid or no path exists
+pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_directed(lines, true) // Default to undirected/bidirectional
+}
+
+#[allow(clippy::doc_overindented_list_items)]
+/// Find the shortest path in a weighted graph with explicit control over edge directionality.
+///
+/// # Arguments
+/// * `lines` - Graph definition lines (same format as `find_shortest_path`)
+/// * `bidirectional` - If `true`, edges are made bidirectional (undirected graph).
+///                     If `false`, edges are one-way only (directed graph).
+///                     When `true`, if both A->B and B->A are specified, the last weight wins.
+///
+/// # Returns
+/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
+/// * `Err(message)` - Error message if input is invalid or no path exists
+pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
 ) -> Result<String, String> {
@@ -28,22 +39,22 @@ pub fn GraphChallengeWithDirection(
     }
 
     // Number of nodes
-    let N = lines[0].parse::<u32>().map_err(|_| {
+    let num_nodes = lines[0].parse::<u32>().map_err(|_| {
         format!(
             "Invalid number of nodes: '{}' (expected a positive integer)",
             lines[0]
         )
     })? as usize;
 
-    if N == 0 {
+    if num_nodes == 0 {
         return Ok("-1".to_string());
     }
 
     // Validate we have enough lines for node names
-    if lines.len() < 1 + N {
+    if lines.len() < 1 + num_nodes {
         return Err(format!(
             "Not enough lines: expected {} node names, but only {} lines provided",
-            N,
+            num_nodes,
             lines.len().saturating_sub(1)
         ));
     }
@@ -53,7 +64,7 @@ pub fn GraphChallengeWithDirection(
     let mut nodes_reverse = HashMap::new();
     let mut seen_nodes = std::collections::HashSet::new();
 
-    for (i, &item) in lines.iter().enumerate().skip(1usize).take(N) {
+    for (i, &item) in lines.iter().enumerate().skip(1usize).take(num_nodes) {
         let node_name = item.trim();
         if node_name.is_empty() {
             return Err(format!("Empty node name at line {}", i + 1));
@@ -68,7 +79,7 @@ pub fn GraphChallengeWithDirection(
         nodes_reverse.insert(i - 1, node_name); // node map
     }
 
-    if N == 1 {
+    if num_nodes == 1 {
         return Ok(nodes_reverse
             .get(&0)
             .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
@@ -77,9 +88,9 @@ pub fn GraphChallengeWithDirection(
 
     // Build the adjacency list: Vec<Vec<(neighbor_index, weight)>>
     // More space-efficient for sparse graphs: O(V + E) instead of O(V²)
-    let mut graph = vec![Vec::new(); N];
+    let mut graph = vec![Vec::new(); num_nodes];
 
-    for (line_num, line) in lines.iter().skip(1 + N).enumerate() {
+    for (line_num, line) in lines.iter().skip(1 + num_nodes).enumerate() {
         let line = line.trim();
         if line.is_empty() {
             continue; // Skip empty lines
@@ -91,7 +102,7 @@ pub fn GraphChallengeWithDirection(
         if parts.len() != 3 {
             return Err(format!(
                 "Invalid edge format at line {}: '{}' (expected format: node1|node2|weight)",
-                line_num + 1 + N + 1,
+                line_num + 1 + num_nodes + 1,
                 line
             ));
         }
@@ -143,7 +154,7 @@ pub fn GraphChallengeWithDirection(
     // the shortest path to the last one.
     // Using adjacency list is more efficient for sparse graphs.
     // Use binary heap by default (faster for most cases), Fibonacci heap available for benchmarking
-    let path = dijkstra(0, N - 1, &graph);
+    let path = dijkstra(0, num_nodes - 1, &graph);
     //  println!("Path: {path:#?}");
 
     // 3. Return the shortest path; if no shortest path found, return -1.
@@ -288,35 +299,35 @@ mod tests {
 
     #[test]
     fn test_empty_input() {
-        let result = GraphChallenge(vec![]);
+        let result = find_shortest_path(vec![]);
         assert_eq!(result, Ok("-1".to_string()));
     }
 
     #[test]
     fn test_single_node() {
         let input = vec!["1", "A"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("A".to_string()));
     }
 
     #[test]
     fn test_two_nodes_connected() {
         let input = vec!["2", "A", "B", "A|B|5"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("A-B".to_string()));
     }
 
     #[test]
     fn test_two_nodes_disconnected() {
         let input = vec!["2", "A", "B"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("-1".to_string()));
     }
 
     #[test]
     fn test_simple_path() {
         let input = vec!["3", "A", "B", "C", "A|B|2", "B|C|3"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("A-B-C".to_string()));
     }
 
@@ -326,14 +337,14 @@ mod tests {
         let input = vec![
             "4", "A", "B", "C", "D", "A|B|1", "B|C|1", "C|D|1", "A|D|100",
         ];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("A-B-C-D".to_string()));
     }
 
     #[test]
     fn test_invalid_node_count() {
         let input = vec!["abc"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid number of nodes"));
     }
@@ -341,7 +352,7 @@ mod tests {
     #[test]
     fn test_not_enough_nodes() {
         let input = vec!["3", "A", "B"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Not enough lines"));
     }
@@ -349,7 +360,7 @@ mod tests {
     #[test]
     fn test_duplicate_node_names() {
         let input = vec!["2", "A", "A", "A|A|5"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Duplicate node name"));
     }
@@ -357,7 +368,7 @@ mod tests {
     #[test]
     fn test_invalid_edge_format() {
         let input = vec!["2", "A", "B", "A|B"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid edge format"));
     }
@@ -365,7 +376,7 @@ mod tests {
     #[test]
     fn test_node_not_in_list() {
         let input = vec!["2", "A", "B", "A|C|5"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not found in node list"));
     }
@@ -373,7 +384,7 @@ mod tests {
     #[test]
     fn test_invalid_weight() {
         let input = vec!["2", "A", "B", "A|B|abc"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid weight"));
     }
@@ -381,7 +392,7 @@ mod tests {
     #[test]
     fn test_self_loop() {
         let input = vec!["2", "A", "B", "A|A|5"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Self-loop detected"));
     }
@@ -389,7 +400,7 @@ mod tests {
     #[test]
     fn test_empty_node_name() {
         let input = vec!["2", "", "B", "A|B|5"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Empty node name"));
     }
@@ -397,7 +408,7 @@ mod tests {
     #[test]
     fn test_zero_nodes() {
         let input = vec!["0"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         assert_eq!(result, Ok("-1".to_string()));
     }
 
@@ -482,7 +493,7 @@ mod tests {
     fn test_empty_lines_in_edges() {
         // Should skip empty lines in edge definitions
         let input = vec!["2", "A", "B", "A|B|5", "", "A|B|3"];
-        let result = GraphChallenge(input);
+        let result = find_shortest_path(input);
         // Should work, but the last edge will overwrite the first
         assert_eq!(result, Ok("A-B".to_string()));
     }
@@ -519,8 +530,8 @@ mod tests {
                 .trim()
                 .to_string();
 
-            // Run GraphChallenge
-            let result = GraphChallenge(input_lines);
+            // Run find_shortest_path
+            let result = find_shortest_path(input_lines);
 
             // Compare results
             match result {
@@ -565,7 +576,7 @@ mod tests {
 
             // Read expected error message
             // Note: error files may include "Graph processing error: " prefix from main.rs
-            // but GraphChallenge returns just the error message
+            // but find_shortest_path returns just the error message
             let expected_error_full = fs::read_to_string(&error_file)
                 .unwrap_or_else(|_| panic!("Failed to read {:?}", error_file))
                 .trim()
@@ -577,8 +588,8 @@ mod tests {
                 .unwrap_or(&expected_error_full)
                 .to_string();
 
-            // Run GraphChallenge - should fail
-            let result = GraphChallenge(input_lines);
+            // Run find_shortest_path - should fail
+            let result = find_shortest_path(input_lines);
 
             // Compare error messages
             match result {
