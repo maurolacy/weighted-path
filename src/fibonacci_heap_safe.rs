@@ -244,25 +244,41 @@ impl SafeFibonacciHeap {
     }
 
     pub fn decrease_key(&mut self, node: &Rc<RefCell<SafeNode>>, new_key: u32) -> bool {
-        if new_key > node.borrow().key {
+        // Check if we can decrease
+        let old_key = node.borrow().key;
+        if new_key > old_key {
             return false; // Can only decrease
         }
 
+        // Update key
         node.borrow_mut().key = new_key;
-        let parent = node.borrow().parent.clone();
 
-        if let Some(parent_weak) = parent
-            && let Some(parent_rc) = parent_weak.upgrade()
-            && node.borrow().key < parent_rc.borrow().key
-        {
-            self.cut(node, &parent_rc);
-            self.cascading_cut(&parent_rc);
+        // Get parent before checking if we need to cut
+        let parent = node.borrow().parent.clone();
+        let needs_cut = if let Some(parent_weak) = &parent {
+            if let Some(parent_rc) = parent_weak.upgrade() {
+                new_key < parent_rc.borrow().key
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        if needs_cut {
+            if let Some(parent_weak) = parent {
+                if let Some(parent_rc) = parent_weak.upgrade() {
+                    self.cut(node, &parent_rc);
+                    self.cascading_cut(&parent_rc);
+                }
+            }
         }
 
-        if let Some(min_ref) = &self.min
-            && node.borrow().key < min_ref.borrow().key
-        {
-            self.min = Some(Rc::clone(node));
+        // Update min if needed
+        if let Some(min_ref) = &self.min {
+            if new_key < min_ref.borrow().key {
+                self.min = Some(Rc::clone(node));
+            }
         }
 
         true
@@ -270,21 +286,29 @@ impl SafeFibonacciHeap {
 
     fn cut(&mut self, node: &Rc<RefCell<SafeNode>>, parent: &Rc<RefCell<SafeNode>>) {
         // Remove node from parent's child list
-        {
+        let (left, right, is_parent_child) = {
             let node_borrow = node.borrow();
-            if let (Some(left), Some(right)) = (node_borrow.left.clone(), node_borrow.right.clone())
-            {
-                if Rc::ptr_eq(&left, &right) && Rc::ptr_eq(&left, node) {
-                    // Only child
-                    parent.borrow_mut().child = None;
-                } else {
-                    left.borrow_mut().right = node_borrow.right.clone();
-                    right.borrow_mut().left = node_borrow.left.clone();
-                    if let Some(parent_child) = &parent.borrow().child
-                        && Rc::ptr_eq(parent_child, node)
-                    {
-                        parent.borrow_mut().child = node_borrow.right.clone();
-                    }
+            let parent_borrow = parent.borrow();
+            let is_parent_child = parent_borrow
+                .child
+                .as_ref()
+                .map_or(false, |c| Rc::ptr_eq(c, node));
+            (
+                node_borrow.left.clone(),
+                node_borrow.right.clone(),
+                is_parent_child,
+            )
+        };
+
+        if let (Some(left), Some(right)) = (left, right) {
+            if Rc::ptr_eq(&left, &right) && Rc::ptr_eq(&left, node) {
+                // Only child
+                parent.borrow_mut().child = None;
+            } else {
+                left.borrow_mut().right = Some(right.clone());
+                right.borrow_mut().left = Some(left.clone());
+                if is_parent_child {
+                    parent.borrow_mut().child = Some(right);
                 }
             }
         }
