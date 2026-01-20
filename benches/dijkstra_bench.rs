@@ -54,28 +54,6 @@ fn generate_test_graph_with_seed(
     lines
 }
 
-fn benchmark_graph_parsing(c: &mut Criterion) {
-    let mut group = c.benchmark_group("graph_parsing");
-
-    for size in [10, 50, 100, 500, 1000].iter() {
-        let graph = generate_test_graph(*size, 0.1, false);
-        let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
-
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &graph_refs,
-            |b, graph| {
-                b.iter(|| {
-                    // Just parse, don't run algorithm
-                    black_box(find_shortest_path(black_box(graph.clone())))
-                })
-            },
-        );
-    }
-
-    group.finish();
-}
-
 fn benchmark_dijkstra_algorithm(c: &mut Criterion) {
     let mut group = c.benchmark_group("dijkstra_algorithm");
 
@@ -292,13 +270,13 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
         }
 
         // Verify both implementations produce the same result
-        let unsafe_result = dijkstra_fibonacci_unsafe(0, adj_list.len() - 1, &adj_list);
-        let safe_result = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
+        let res_safe = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
+        let res_unsafe = dijkstra_fibonacci_unsafe(0, adj_list.len() - 1, &adj_list);
 
         assert_eq!(
-            unsafe_result, safe_result,
+            res_unsafe, res_safe,
             "Mismatch for {}: unsafe={:?}, safe={:?}",
-            name, unsafe_result, safe_result
+            name, res_unsafe, res_safe
         );
 
         // Benchmark unsafe (raw pointers) version
@@ -331,7 +309,6 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    benchmark_graph_parsing,
     benchmark_dijkstra_algorithm,
     benchmark_different_densities,
     benchmark_real_world_graphs,
