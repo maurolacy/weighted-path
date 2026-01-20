@@ -1,6 +1,6 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
-use weigthed_path::dijkstra::{
+use weighted_path::dijkstra::{
     dijkstra_fibonacci, dijkstra_fibonacci_unsafe, find_shortest_path, find_shortest_path_directed,
 };
 

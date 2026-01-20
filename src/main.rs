@@ -7,7 +7,7 @@ use std::{
     process,
 };
 
-use weigthed_path::dijkstra::find_shortest_path;
+use weighted_path::dijkstra::find_shortest_path;
 
 fn main() {
     if let Err(e) = run() {

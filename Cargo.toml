@@ -1,5 +1,5 @@
 [package]
-name = "weigthed_path"
+name = "weighted_path"
 version = "0.1.0"
 edition = "2024"
 
