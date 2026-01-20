@@ -1,8 +1,12 @@
-use crate::fibonacci_heap::FibonacciHeap;
-use crate::fibonacci_heap_unsafe::{UnsafeFibonacciHeap, UnsafeNode};
-use std::cell::RefCell;
-use std::collections::{BinaryHeap, HashMap};
-use std::rc::Rc;
+pub mod binary;
+pub mod fib_safe;
+pub mod fib_unsafe;
+
+use std::collections::HashMap;
+
+pub use binary::dijkstra;
+pub use fib_safe::dijkstra_fibonacci_safe;
+pub use fib_unsafe::dijkstra_fibonacci;
 
 /// Find the shortest path in a weighted graph using Dijkstra's algorithm.
 ///
@@ -34,9 +38,6 @@ pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
 ) -> Result<String, String> {
-    //  println!("{:?}", lines);
-
-    // 1. Parse the graph and build and adjacency matrix.
     if lines.is_empty() {
         return Ok("-1".to_string());
     }
@@ -90,7 +91,6 @@ pub fn find_shortest_path_directed(
     }
 
     // Build the adjacency list: Vec<Vec<(neighbor_index, weight)>>
-    // More space-efficient for sparse graphs: O(V + E) instead of O(V²)
     let mut graph = vec![Vec::new(); num_nodes];
 
     for (line_num, line) in lines.iter().skip(1 + num_nodes).enumerate() {
@@ -100,7 +100,7 @@ pub fn find_shortest_path_directed(
         }
 
         // Split the line into node 1, node 2, and weight
-        let parts: Vec<&str> = line.split("|").collect();
+        let parts: Vec<&str> = line.split('|').collect();
 
         if parts.len() != 3 {
             return Err(format!(
@@ -136,7 +136,7 @@ pub fn find_shortest_path_directed(
             )
         })?;
 
-        // Check for self-loops (optional validation)
+        // Check for self-loops
         if node_1_index == node_2_index {
             return Err(format!(
                 "Self-loop detected: node '{}' connected to itself",
@@ -153,14 +153,9 @@ pub fn find_shortest_path_directed(
         }
     }
 
-    // 2. Use Dijstra's to traverse the graph from the first node, and find
-    // the shortest path to the last one.
-    // Using adjacency list is more efficient for sparse graphs.
-    // Use binary heap by default (faster for most cases), Fibonacci heap available for benchmarking
+    // Use binary-heap Dijkstra by default
     let path = dijkstra(0, num_nodes - 1, &graph);
-    //  println!("Path: {path:#?}");
 
-    // 3. Return the shortest path; if no shortest path found, return -1.
     if path.len() <= 1 {
         return Ok("-1".to_string());
     }
@@ -177,193 +172,6 @@ pub fn find_shortest_path_directed(
         path_parts.push(*node);
     }
     Ok(path_parts.join("-"))
-}
-
-// Expose for testing and benchmarking
-pub(crate) fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
-    let mut distances = vec![u32::MAX; graph.len()];
-    distances[start] = 0;
-    let mut previous = vec![None; graph.len()];
-    let mut priority_queue = BinaryHeap::new();
-    priority_queue.push((std::cmp::Reverse(0), start));
-
-    while let Some((std::cmp::Reverse(current_distance), current_node)) = priority_queue.pop() {
-        // Early termination: if we've reached the target, we're done
-        if current_node == end {
-            break;
-        }
-
-        // Skip if we've already found a better path to this node
-        if distances[current_node] < current_distance {
-            continue;
-        }
-
-        // Iterate only over actual neighbors (adjacency list)
-        for &(neighbor, weight) in &graph[current_node] {
-            let new_distance = current_distance + weight;
-            if new_distance < distances[neighbor] {
-                distances[neighbor] = new_distance;
-                previous[neighbor] = Some(current_node);
-                priority_queue.push((std::cmp::Reverse(new_distance), neighbor));
-            }
-        }
-    }
-
-    // Reconstruct path in reverse order to avoid reversing at the end
-    let mut path = Vec::new();
-    let mut current = end;
-
-    // Check if path exists
-    if distances[end] == u32::MAX {
-        return path; // No path found
-    }
-
-    // Build path backwards, then reverse once
-    while let Some(prev) = previous[current] {
-        path.push(current);
-        current = prev;
-    }
-    path.push(start);
-    path.reverse();
-    path
-}
-
-// Fibonacci heap version - potentially faster for dense graphs with many decrease_key operations
-// Time complexity: O(E + V log V) amortized vs O((V + E) log V) for binary heap
-// Uses our custom Fibonacci heap implementation that properly supports decrease_key
-/// Fibonacci heap version - exposed for benchmarking
-pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
-    let mut distances = vec![u32::MAX; graph.len()];
-    distances[start] = 0;
-    let mut previous = vec![None; graph.len()];
-
-    // Track handles (raw pointers) for decrease_key operations
-    // Our custom implementation uses raw pointers to avoid RefCell borrow conflicts
-    let mut handles: Vec<Option<*mut UnsafeNode>> = vec![None; graph.len()];
-    let mut heap = UnsafeFibonacciHeap::new();
-
-    // Insert start node
-    let handle = heap.insert(0, start);
-    handles[start] = Some(handle);
-
-    while let Some((current_distance, current_node)) = heap.extract_min() {
-        // Skip if we've already found a better path (duplicate entry)
-        if distances[current_node] < current_distance {
-            continue;
-        }
-
-        // Early termination: if we've reached the target, we're done
-        if current_node == end {
-            break;
-        }
-
-        // Process neighbors
-        for &(neighbor, weight) in &graph[current_node] {
-            let new_distance = current_distance + weight;
-            if new_distance < distances[neighbor] {
-                distances[neighbor] = new_distance;
-                previous[neighbor] = Some(current_node);
-
-                // Use decrease_key if node is already in heap, otherwise insert
-                if let Some(handle) = handles[neighbor] {
-                    // Node is already in heap - use decrease_key (O(1) amortized)
-                    heap.decrease_key(handle, new_distance);
-                } else {
-                    // Insert new node
-                    let handle = heap.insert(new_distance, neighbor);
-                    handles[neighbor] = Some(handle);
-                }
-            }
-        }
-    }
-
-    // Reconstruct path
-    let mut path = Vec::new();
-    let mut current = end;
-
-    // Check if path exists
-    if distances[end] == u32::MAX {
-        return path; // No path found
-    }
-
-    // Build path backwards, then reverse once
-    while let Some(prev) = previous[current] {
-        path.push(current);
-        current = prev;
-    }
-    path.push(start);
-    path.reverse();
-    path
-}
-
-/// Safe Fibonacci heap version - uses Rc<RefCell> instead of raw pointers
-/// This version is memory-safe but may have different performance characteristics
-pub fn dijkstra_fibonacci_safe(
-    start: usize,
-    end: usize,
-    graph: &[Vec<(usize, u32)>],
-) -> Vec<usize> {
-    let mut distances = vec![u32::MAX; graph.len()];
-    distances[start] = 0;
-    let mut previous = vec![None; graph.len()];
-
-    // Track handles (Rc<RefCell>) for decrease_key operations
-    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci_heap::Node>>>> =
-        vec![None; graph.len()];
-    let mut heap = FibonacciHeap::new();
-
-    // Insert start node
-    let handle = heap.insert(0, start);
-    handles[start] = Some(handle);
-
-    while let Some((current_distance, current_node)) = heap.extract_min() {
-        // Skip if we've already found a better path (duplicate entry)
-        if distances[current_node] < current_distance {
-            continue;
-        }
-
-        // Early termination: if we've reached the target, we're done
-        if current_node == end {
-            break;
-        }
-
-        // Process neighbors
-        for &(neighbor, weight) in &graph[current_node] {
-            let new_distance = current_distance + weight;
-            if new_distance < distances[neighbor] {
-                distances[neighbor] = new_distance;
-                previous[neighbor] = Some(current_node);
-
-                // Use decrease_key if node is already in heap, otherwise insert
-                if let Some(ref handle) = handles[neighbor] {
-                    // Node is already in heap - use decrease_key (O(1) amortized)
-                    heap.decrease_key(handle, new_distance);
-                } else {
-                    // Insert new node
-                    let handle = heap.insert(new_distance, neighbor);
-                    handles[neighbor] = Some(handle);
-                }
-            }
-        }
-    }
-
-    // Reconstruct path
-    let mut path = Vec::new();
-    let mut current = end;
-
-    // Check if path exists
-    if distances[end] == u32::MAX {
-        return path; // No path found
-    }
-
-    // Build path backwards, then reverse once
-    while let Some(prev) = previous[current] {
-        path.push(current);
-        current = prev;
-    }
-    path.push(start);
-    path.reverse();
-    path
 }
 
 #[cfg(test)]
@@ -526,7 +334,7 @@ mod tests {
                 ],
                 0,
                 4,
-                vec![0, 2, 1, 3, 4], // Path: 0->2->1->3->4 (cost: 2+1+5+2=10)
+                vec![0, 2, 1, 3, 4],
             ),
             // Graph with multiple paths
             (
@@ -538,7 +346,7 @@ mod tests {
                 ],
                 0,
                 3,
-                vec![0, 1, 3], // Shortest: 0->1->3 (cost: 1+2=3), not 0->2->3 (cost: 5+3=8)
+                vec![0, 1, 3],
             ),
         ];
 
@@ -571,7 +379,6 @@ mod tests {
         assert_eq!(result, Ok("A-B".to_string()));
     }
 
-    // Integration tests from testdata files
     #[test]
     fn test_valid_inputs_from_files() {
         use std::fs;
@@ -579,11 +386,9 @@ mod tests {
 
         let testdata_dir = Path::new("testdata");
         if !testdata_dir.exists() {
-            // Skip if testdata directory doesn't exist (e.g., in CI)
             return;
         }
 
-        // Test all input*.txt files
         for i in 0..=18 {
             let input_file = testdata_dir.join(format!("input{}.txt", i));
             let output_file = testdata_dir.join(format!("output{}.txt", i));
@@ -592,21 +397,17 @@ mod tests {
                 continue;
             }
 
-            // Read input file
             let input_content = fs::read_to_string(&input_file)
                 .unwrap_or_else(|_| panic!("Failed to read {:?}", input_file));
             let input_lines: Vec<&str> = input_content.lines().collect();
 
-            // Read expected output
             let expected_output = fs::read_to_string(&output_file)
                 .unwrap_or_else(|_| panic!("Failed to read {:?}", output_file))
                 .trim()
                 .to_string();
 
-            // Run find_shortest_path
             let result = find_shortest_path(input_lines);
 
-            // Compare results
             match result {
                 Ok(actual) => {
                     assert_eq!(
@@ -629,11 +430,9 @@ mod tests {
 
         let testdata_dir = Path::new("testdata");
         if !testdata_dir.exists() {
-            // Skip if testdata directory doesn't exist (e.g., in CI)
             return;
         }
 
-        // Test all invalid*.txt files
         for i in 1..=6 {
             let input_file = testdata_dir.join(format!("invalid{}.txt", i));
             let error_file = testdata_dir.join(format!("error_invalid{}.txt", i));
@@ -642,29 +441,22 @@ mod tests {
                 continue;
             }
 
-            // Read input file
             let input_content = fs::read_to_string(&input_file)
                 .unwrap_or_else(|_| panic!("Failed to read {:?}", input_file));
             let input_lines: Vec<&str> = input_content.lines().collect();
 
-            // Read expected error message
-            // Note: error files may include "Graph processing error: " prefix from main.rs
-            // but find_shortest_path returns just the error message
             let expected_error_full = fs::read_to_string(&error_file)
                 .unwrap_or_else(|_| panic!("Failed to read {:?}", error_file))
                 .trim()
                 .to_string();
 
-            // Strip "Graph processing error: " prefix if present
             let expected_error = expected_error_full
                 .strip_prefix("Graph processing error: ")
                 .unwrap_or(&expected_error_full)
                 .to_string();
 
-            // Run find_shortest_path - should fail
             let result = find_shortest_path(input_lines);
 
-            // Compare error messages
             match result {
                 Ok(_) => {
                     panic!(
