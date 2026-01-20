@@ -3,7 +3,11 @@ use crate::fibonacci_heap_unsafe::{UnsafeFibonacciHeap, UnsafeNode};
 /// Dijkstra implementation using the unsafe/raw-pointer Fibonacci heap.
 ///
 /// Potentially much faster on dense graphs with many `decrease_key` operations.
-pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_fibonacci_unsafe(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];

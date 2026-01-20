@@ -5,11 +5,7 @@ use std::rc::Rc;
 /// Dijkstra implementation using the safe `Rc<RefCell>` Fibonacci heap.
 ///
 /// Memory-safe but slower than the raw-pointer variant due to Rc/RefCell overhead.
-pub fn dijkstra_fibonacci_safe(
-    start: usize,
-    end: usize,
-    graph: &[Vec<(usize, u32)>],
-) -> Vec<usize> {
+pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];

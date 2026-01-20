@@ -1,7 +1,7 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use weigthed_path::dijkstra::{
-    dijkstra_fibonacci, dijkstra_fibonacci_safe, find_shortest_path, find_shortest_path_directed,
+    dijkstra_fibonacci, dijkstra_fibonacci_unsafe, find_shortest_path, find_shortest_path_directed,
 };
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
@@ -292,8 +292,8 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
         }
 
         // Verify both implementations produce the same result
-        let unsafe_result = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
-        let safe_result = dijkstra_fibonacci_safe(0, adj_list.len() - 1, &adj_list);
+        let unsafe_result = dijkstra_fibonacci_unsafe(0, adj_list.len() - 1, &adj_list);
+        let safe_result = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
 
         assert_eq!(
             unsafe_result, safe_result,
@@ -306,7 +306,13 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             BenchmarkId::new("unsafe_raw_pointers", name),
             &adj_list,
             |b, graph| {
-                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
+                b.iter(|| {
+                    black_box(dijkstra_fibonacci_unsafe(
+                        0,
+                        graph.len() - 1,
+                        black_box(graph),
+                    ))
+                })
             },
         );
 
@@ -315,13 +321,7 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             BenchmarkId::new("safe_rc_refcell", name),
             &adj_list,
             |b, graph| {
-                b.iter(|| {
-                    black_box(dijkstra_fibonacci_safe(
-                        0,
-                        graph.len() - 1,
-                        black_box(graph),
-                    ))
-                })
+                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
             },
         );
     }

@@ -1,12 +1,12 @@
 pub mod binary;
-pub mod fib_safe;
+pub mod fib;
 pub mod fib_unsafe;
 
 use std::collections::HashMap;
 
 pub use binary::dijkstra;
-pub use fib_safe::dijkstra_fibonacci_safe;
-pub use fib_unsafe::dijkstra_fibonacci;
+pub use fib::dijkstra_fibonacci;
+pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 
 /// Find the shortest path in a weighted graph using Dijkstra's algorithm.
 ///
