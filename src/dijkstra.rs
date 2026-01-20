@@ -1,5 +1,5 @@
-use crate::fibonacci_heap::{FibonacciHeap, Node};
-use crate::fibonacci_heap_safe::SafeFibonacciHeap;
+use crate::fibonacci_heap::FibonacciHeap;
+use crate::fibonacci_heap_unsafe::{UnsafeFibonacciHeap, UnsafeNode};
 use std::cell::RefCell;
 use std::collections::{BinaryHeap, HashMap};
 use std::rc::Rc;
@@ -239,8 +239,8 @@ pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>])
 
     // Track handles (raw pointers) for decrease_key operations
     // Our custom implementation uses raw pointers to avoid RefCell borrow conflicts
-    let mut handles: Vec<Option<*mut Node>> = vec![None; graph.len()];
-    let mut heap = FibonacciHeap::new();
+    let mut handles: Vec<Option<*mut UnsafeNode>> = vec![None; graph.len()];
+    let mut heap = UnsafeFibonacciHeap::new();
 
     // Insert start node
     let handle = heap.insert(0, start);
@@ -308,9 +308,9 @@ pub fn dijkstra_fibonacci_safe(
     let mut previous = vec![None; graph.len()];
 
     // Track handles (Rc<RefCell>) for decrease_key operations
-    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci_heap_safe::SafeNode>>>> =
+    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci_heap::Node>>>> =
         vec![None; graph.len()];
-    let mut heap = SafeFibonacciHeap::new();
+    let mut heap = FibonacciHeap::new();
 
     // Insert start node
     let handle = heap.insert(0, start);
