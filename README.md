@@ -63,19 +63,17 @@ This means the shortest path from node `A` to node `D` goes through node `B`.
 
 ## Running Tests
 
-A test script is provided to run all test cases:
-
 ```bash
-./tests.sh
+cargo test --lib
 ```
 
-This will run the program on all input files in the `testdata/` directory and compare the results with the expected outputs.
+This runs unit tests, including file-based test cases in `testdata/` (when present).
 
 ## Algorithm
 
 The program uses Dijkstra's algorithm to find the shortest path:
 
-1. Parse the graph and build an adjacency matrix
+1. Parse the graph and build an adjacency list
 2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node
 3. Return the path as a dash-separated string, or `-1` if no path exists
 
@@ -113,9 +111,6 @@ A graph generator utility is included to create large graphs for benchmarking:
 ```bash
 # Generate a graph with 1000 nodes and 10% edge density
 cargo run --bin generate_graph 1000 0.1 output.txt
-
-# Generate graphs of various sizes (script)
-./scripts/generate_benchmark_graphs.sh
 ```
 
 **Graph Generator Usage:**
@@ -140,7 +135,7 @@ cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
 **Note on Directed vs Undirected:**
 - **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both A→B and B→A are created with weight `w`.
 - **Directed graphs**: The `find_shortest_path_directed` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
-- **Input format**: The same input can be processed as either directed or undirected by using `find_shortest_path_directed(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created (overwriting any existing reverse edges with the same weight).
+- **Input format**: The same input can be processed as either directed or undirected by using `find_shortest_path_directed(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created.
 - **Benchmarking**: This allows testing the same graph structure in both modes for fair performance comparison. The benchmark suite includes a `directed_vs_undirected` benchmark that tests the same graph with both settings.
 - **Performance**: Directed graphs typically have fewer edges (only forward direction), while undirected graphs have symmetric edges. The same input processed as undirected will have more edges and may be slightly slower.
 
@@ -186,12 +181,20 @@ The current implementation uses:
 - For a sparse graph with 1000 nodes and 5000 edges: matrix = 1M entries, list = 6000 entries
 
 **Fibonacci Heap Implementation:**
-- A custom Fibonacci heap implementation is available for benchmarking (`dijkstra_fibonacci`)
+- Fibonacci heap implementations are available for benchmarking:
+  - `dijkstra_fibonacci`: safe `Rc<RefCell>` heap (clear/ergonomic but slower)
+  - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
 - Provides O(E + V log V) amortized time complexity vs O((V + E) log V) for binary heap
 - **Performance improvements observed:**
   - ~20x faster for sparse graphs (500 nodes)
   - >100x faster for dense graphs (1000 nodes)
-- Uses raw pointers to avoid RefCell borrow conflicts found in external crates
-- Properly implements `decrease_key` for optimal performance
+- The unsafe variant uses raw pointers to avoid `RefCell` borrow conflicts and overhead, and implements `decrease_key` for optimal performance
 
 For very large graphs (10,000+ nodes), the Fibonacci heap implementation is recommended for best performance.
+
+## Module Layout
+
+- `src/dijkstra/`: Dijkstra implementations (binary heap, Fibonacci heap safe/unsafe) + parsing/validation + tests
+- `src/fibonacci/`: Fibonacci heap implementations
+  - `heap.rs`: safe heap (`Node`, `FibonacciHeap`)
+  - `heap_unsafe.rs`: unsafe heap (`UnsafeNode`, `UnsafeFibonacciHeap`)
