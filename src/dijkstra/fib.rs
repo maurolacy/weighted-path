@@ -1,4 +1,4 @@
-use crate::fibonacci_heap::FibonacciHeap;
+use crate::fibonacci::FibonacciHeap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,8 +11,7 @@ pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>])
     let mut previous = vec![None; graph.len()];
 
     // Track handles (Rc<RefCell>) for decrease_key operations
-    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci_heap::Node>>>> =
-        vec![None; graph.len()];
+    let mut handles: Vec<Option<Rc<RefCell<crate::fibonacci::Node>>>> = vec![None; graph.len()];
     let mut heap = FibonacciHeap::new();
 
     // Insert start node

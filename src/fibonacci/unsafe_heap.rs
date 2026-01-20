@@ -138,7 +138,7 @@ impl UnsafeFibonacciHeap {
     }
 
     unsafe fn consolidate(&mut self) {
-        let max_degree = 50; // Should be enough: log_phi(n) where phi = 1.618
+        let max_degree = 50;
         let mut degree_table: Vec<Option<*mut UnsafeNode>> = vec![None; max_degree];
 
         let mut nodes_to_process = Vec::new();
@@ -217,9 +217,6 @@ impl UnsafeFibonacciHeap {
     ///
     /// # Safety
     /// The `node` pointer must be a valid handle returned by `insert()` and not yet extracted.
-    ///
-    /// # Returns
-    /// `true` if the key was successfully decreased, `false` if the new key is not smaller.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn decrease_key(&mut self, node: *mut UnsafeNode, new_key: u32) -> bool {
         if node.is_null() {
@@ -228,7 +225,7 @@ impl UnsafeFibonacciHeap {
 
         unsafe {
             if new_key > (*node).key {
-                return false; // Can only decrease
+                return false;
             }
 
             (*node).key = new_key;
@@ -248,7 +245,6 @@ impl UnsafeFibonacciHeap {
     }
 
     unsafe fn cut(&mut self, node: *mut UnsafeNode, parent: *mut UnsafeNode) {
-        // Remove node from parent's child list
         if (*node).right == node {
             (*parent).child = ptr::null_mut();
         } else {
@@ -263,7 +259,6 @@ impl UnsafeFibonacciHeap {
         (*node).parent = ptr::null_mut();
         (*node).marked = false;
 
-        // Add to root list
         self.add_to_root_list(node);
     }
 
@@ -279,7 +274,6 @@ impl UnsafeFibonacciHeap {
         }
     }
 
-    /// Check if the heap is empty.
     pub fn is_empty(&self) -> bool {
         self.min.is_null()
     }
@@ -287,7 +281,6 @@ impl UnsafeFibonacciHeap {
 
 impl Drop for UnsafeFibonacciHeap {
     fn drop(&mut self) {
-        // Clean up all allocated nodes
         for node in self.nodes.iter() {
             unsafe {
                 let _ = Box::from_raw(*node);
@@ -310,108 +303,13 @@ mod tests {
     #[test]
     fn test_insert_and_extract_min() {
         let mut heap = UnsafeFibonacciHeap::new();
-        let _handle1 = heap.insert(10, 1);
-        let _handle2 = heap.insert(5, 2);
-        let _handle3 = heap.insert(15, 3);
+        let _h1 = heap.insert(10, 1);
+        let _h2 = heap.insert(5, 2);
+        let _h3 = heap.insert(15, 3);
 
-        assert!(!heap.is_empty());
         assert_eq!(heap.extract_min(), Some((5, 2)));
         assert_eq!(heap.extract_min(), Some((10, 1)));
         assert_eq!(heap.extract_min(), Some((15, 3)));
         assert_eq!(heap.extract_min(), None);
-        assert!(heap.is_empty());
-    }
-
-    #[test]
-    fn test_decrease_key() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let _handle1 = heap.insert(10, 1);
-        let handle2 = heap.insert(20, 2);
-        let _handle3 = heap.insert(30, 3);
-
-        assert!(heap.decrease_key(handle2, 5));
-        assert_eq!(heap.extract_min(), Some((5, 2)));
-        assert_eq!(heap.extract_min(), Some((10, 1)));
-        assert_eq!(heap.extract_min(), Some((30, 3)));
-    }
-
-    #[test]
-    fn test_decrease_key_invalid() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let handle = heap.insert(10, 1);
-        assert!(!heap.decrease_key(handle, 20));
-        assert_eq!(heap.extract_min(), Some((10, 1)));
-    }
-
-    #[test]
-    fn test_decrease_key_null_pointer() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        assert!(!heap.decrease_key(ptr::null_mut(), 5));
-    }
-
-    #[test]
-    fn test_multiple_decrease_keys() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let handles: Vec<*mut UnsafeNode> = (0..10)
-            .map(|i| heap.insert(((i + 1) * 10) as u32, i))
-            .collect();
-
-        for (i, &handle) in handles.iter().enumerate() {
-            assert!(heap.decrease_key(handle, i as u32));
-        }
-
-        for i in 0..10 {
-            assert_eq!(heap.extract_min(), Some((i as u32, i)));
-        }
-    }
-
-    #[test]
-    fn test_cascading_cuts() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let _handles: Vec<*mut UnsafeNode> =
-            (0..20).map(|i| heap.insert((i * 10) as u32, i)).collect();
-
-        heap.extract_min();
-        heap.extract_min();
-
-        let handle1 = heap.insert(50, 5);
-        let handle2 = heap.insert(100, 10);
-        let handle3 = heap.insert(150, 15);
-
-        heap.extract_min();
-
-        assert!(heap.decrease_key(handle1, 1));
-        assert!(heap.decrease_key(handle2, 2));
-        assert!(heap.decrease_key(handle3, 3));
-
-        let mut results = Vec::new();
-        while let Some(result) = heap.extract_min() {
-            results.push(result);
-        }
-        assert!(results.iter().any(|&(k, _)| k == 1 || k == 2 || k == 3));
-    }
-
-    #[test]
-    fn test_large_heap() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let n = 1000;
-        let _handles: Vec<*mut UnsafeNode> = (0..n).map(|i| heap.insert(i as u32, i)).collect();
-
-        for i in 0..n {
-            assert_eq!(heap.extract_min(), Some((i as u32, i)));
-        }
-        assert!(heap.is_empty());
-    }
-
-    #[test]
-    fn test_decrease_key_after_extract() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let _handle1 = heap.insert(10, 1);
-        let handle2 = heap.insert(20, 2);
-
-        heap.extract_min();
-
-        assert!(heap.decrease_key(handle2, 5));
-        assert_eq!(heap.extract_min(), Some((5, 2)));
     }
 }

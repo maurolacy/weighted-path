@@ -8,14 +8,14 @@ use std::rc::{Rc, Weak};
 
 #[derive(Clone)]
 pub struct Node {
-    key: u32,
-    node_id: usize,
-    degree: usize,
-    marked: bool,
-    parent: Option<Weak<RefCell<Node>>>,
-    child: Option<Rc<RefCell<Node>>>,
-    left: Option<Rc<RefCell<Node>>>,
-    right: Option<Rc<RefCell<Node>>>,
+    pub(crate) key: u32,
+    pub(crate) node_id: usize,
+    pub(crate) degree: usize,
+    pub(crate) marked: bool,
+    pub(crate) parent: Option<Weak<RefCell<Node>>>,
+    pub(crate) child: Option<Rc<RefCell<Node>>>,
+    pub(crate) left: Option<Rc<RefCell<Node>>>,
+    pub(crate) right: Option<Rc<RefCell<Node>>>,
 }
 
 impl Node {

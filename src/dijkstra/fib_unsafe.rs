@@ -1,4 +1,4 @@
-use crate::fibonacci_heap_unsafe::{UnsafeFibonacciHeap, UnsafeNode};
+use crate::fibonacci::{UnsafeFibonacciHeap, UnsafeNode};
 
 /// Dijkstra implementation using the unsafe/raw-pointer Fibonacci heap.
 ///
