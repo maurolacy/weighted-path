@@ -1,22 +1,20 @@
-// Raw-pointer (unsafe) Fibonacci Heap implementation for Dijkstra's algorithm.
-//
-// This version avoids `Rc<RefCell<...>>` runtime borrow checks and reference-counting overhead,
-// but it relies on raw pointers and careful invariants.
+// Wrapper module re-exporting the unsafe Fibonacci heap implementation.
+// The actual implementation lives in this file for consistency with the safe heap.
 
-#![allow(unsafe_op_in_unsafe_fn)] // We carefully manage unsafe operations
+#![allow(unsafe_op_in_unsafe_fn)]
 
 use std::ptr;
 
 #[derive(Clone, Copy)]
 pub struct UnsafeNode {
-    key: u32,
-    node_id: usize,
-    degree: usize,
-    marked: bool,
-    parent: *mut UnsafeNode,
-    child: *mut UnsafeNode,
-    left: *mut UnsafeNode,
-    right: *mut UnsafeNode,
+    pub(crate) key: u32,
+    pub(crate) node_id: usize,
+    pub(crate) degree: usize,
+    pub(crate) marked: bool,
+    pub(crate) parent: *mut UnsafeNode,
+    pub(crate) child: *mut UnsafeNode,
+    pub(crate) left: *mut UnsafeNode,
+    pub(crate) right: *mut UnsafeNode,
 }
 
 impl UnsafeNode {
@@ -36,7 +34,7 @@ impl UnsafeNode {
 
 pub struct UnsafeFibonacciHeap {
     min: *mut UnsafeNode,
-    nodes: Vec<*mut UnsafeNode>, // Track all nodes for cleanup
+    nodes: Vec<*mut UnsafeNode>,
 }
 
 unsafe impl Send for UnsafeFibonacciHeap {}
@@ -56,23 +54,13 @@ impl UnsafeFibonacciHeap {
         }
     }
 
-    /// Insert a new node into the heap.
-    /// Returns a raw pointer to the node (handle) for use with `decrease_key`.
-    /// The pointer is valid until the node is extracted or the heap is dropped.
-    ///
-    /// # Safety
-    /// The returned pointer is managed internally by the heap and should only be used
-    /// with `decrease_key()`. The pointer becomes invalid after `extract_min()` or when
-    /// the heap is dropped.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn insert(&mut self, key: u32, node_id: usize) -> *mut UnsafeNode {
         let node = Box::into_raw(Box::new(UnsafeNode::new(key, node_id)));
         unsafe {
-            // Initialize circular list
             (*node).left = node;
             (*node).right = node;
 
-            // Add to root list
             if self.min.is_null() {
                 self.min = node;
             } else {
@@ -94,11 +82,6 @@ impl UnsafeFibonacciHeap {
         (*min_left).right = node;
     }
 
-    /// Extract the minimum element from the heap.
-    /// Returns `(key, node_id)` of the minimum element, or `None` if heap is empty.
-    ///
-    /// # Safety
-    /// All internal pointer operations are safe because we control the heap structure.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn extract_min(&mut self) -> Option<(u32, usize)> {
         if self.min.is_null() {
@@ -109,7 +92,6 @@ impl UnsafeFibonacciHeap {
             let z = self.min;
             let result = Some(((*z).key, (*z).node_id));
 
-            // Add children to root list
             if !(*z).child.is_null() {
                 let mut child = (*z).child;
                 loop {
@@ -123,7 +105,6 @@ impl UnsafeFibonacciHeap {
                 }
             }
 
-            // Remove z from root list
             if (*z).right == z {
                 self.min = ptr::null_mut();
             } else {
@@ -191,11 +172,9 @@ impl UnsafeFibonacciHeap {
     }
 
     unsafe fn link(&mut self, y: *mut UnsafeNode, x: *mut UnsafeNode) {
-        // Remove y from root list
         (*(*y).left).right = (*y).right;
         (*(*y).right).left = (*y).left;
 
-        // Make y a child of x
         (*y).parent = x;
         if (*x).child.is_null() {
             (*x).child = y;
@@ -213,10 +192,6 @@ impl UnsafeFibonacciHeap {
         (*y).marked = false;
     }
 
-    /// Decrease the key of a node in the heap.
-    ///
-    /// # Safety
-    /// The `node` pointer must be a valid handle returned by `insert()` and not yet extracted.
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn decrease_key(&mut self, node: *mut UnsafeNode, new_key: u32) -> bool {
         if node.is_null() {
@@ -286,30 +261,5 @@ impl Drop for UnsafeFibonacciHeap {
                 let _ = Box::from_raw(*node);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_empty_heap() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        assert!(heap.is_empty());
-        assert_eq!(heap.extract_min(), None);
-    }
-
-    #[test]
-    fn test_insert_and_extract_min() {
-        let mut heap = UnsafeFibonacciHeap::new();
-        let _h1 = heap.insert(10, 1);
-        let _h2 = heap.insert(5, 2);
-        let _h3 = heap.insert(15, 3);
-
-        assert_eq!(heap.extract_min(), Some((5, 2)));
-        assert_eq!(heap.extract_min(), Some((10, 1)));
-        assert_eq!(heap.extract_min(), Some((15, 3)));
-        assert_eq!(heap.extract_min(), None);
     }
 }

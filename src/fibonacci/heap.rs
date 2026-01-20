@@ -1,7 +1,4 @@
-// Safe Rust Fibonacci Heap implementation using `Rc<RefCell<...>>`.
-//
-// This version is memory-safe (no `unsafe` blocks), but slower than the raw-pointer version due
-// to reference counting and runtime borrow checks.
+// Recreated `heap.rs` from the previous safe Fibonacci heap implementation.
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -45,14 +42,12 @@ impl FibonacciHeap {
     pub fn insert(&mut self, key: u32, node_id: usize) -> Rc<RefCell<Node>> {
         let node = Rc::new(RefCell::new(Node::new(key, node_id)));
 
-        // Initialize circular list
         {
             let mut node_mut = node.borrow_mut();
             node_mut.left = Some(Rc::clone(&node));
             node_mut.right = Some(Rc::clone(&node));
         }
 
-        // Add to root list
         if let Some(ref min_ref) = self.min {
             let node_key = node.borrow().key;
             let min_key = min_ref.borrow().key;
@@ -88,7 +83,6 @@ impl FibonacciHeap {
             Some((min_borrow.key, min_borrow.node_id))
         };
 
-        // Collect children before removing min
         let children = {
             let mut min_borrow = min_node.borrow_mut();
             if let Some(mut child) = min_borrow.child.take() {
@@ -114,7 +108,6 @@ impl FibonacciHeap {
             }
         };
 
-        // Remove min from root list
         let new_min = {
             let min_borrow = min_node.borrow();
             if let (Some(left), Some(right)) = (min_borrow.left.clone(), min_borrow.right.clone()) {
@@ -130,7 +123,6 @@ impl FibonacciHeap {
             }
         };
 
-        // Set new min and add children
         self.min = new_min;
         if let Some(children_vec) = children {
             for child in children_vec {
@@ -158,7 +150,6 @@ impl FibonacciHeap {
         let max_degree = 50;
         let mut degree_table: Vec<Option<Rc<RefCell<Node>>>> = vec![None; max_degree];
 
-        // Collect all root nodes
         let mut roots = Vec::new();
         if let Some(mut current) = self.min.clone() {
             let start = Rc::clone(&current);
@@ -204,7 +195,6 @@ impl FibonacciHeap {
             }
         }
 
-        // Rebuild root list
         self.min = None;
         for node in degree_table.iter().flatten() {
             if let Some(ref min_ref) = self.min {
@@ -223,7 +213,6 @@ impl FibonacciHeap {
     }
 
     fn link(&mut self, y: &Rc<RefCell<Node>>, x: &Rc<RefCell<Node>>) {
-        // Remove y from root list
         {
             let y_borrow = y.borrow();
             if let (Some(left), Some(right)) = (y_borrow.left.clone(), y_borrow.right.clone()) {
@@ -232,7 +221,6 @@ impl FibonacciHeap {
             }
         }
 
-        // Make y a child of x
         y.borrow_mut().parent = Some(Rc::downgrade(x));
         {
             let mut x_borrow = x.borrow_mut();

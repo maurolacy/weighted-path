@@ -1,5 +1,5 @@
-pub mod safe;
-pub mod unsafe_heap;
+pub mod heap;
+pub mod heap_unsafe;
 
-pub use safe::{FibonacciHeap, Node};
-pub use unsafe_heap::{UnsafeFibonacciHeap, UnsafeNode};
+pub use heap::{FibonacciHeap, Node};
+pub use heap_unsafe::{UnsafeFibonacciHeap, UnsafeNode};
