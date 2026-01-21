@@ -164,19 +164,62 @@ fn benchmark_directed_different_sizes(c: &mut Criterion) {
 }
 
 // Reference benchmark for quick performance checks
-// Uses fixed seed (42) for reproducible results
+// Uses fixed seed (42) for reproducible results on specific scenarios:
+// - Sparse graph: 500 nodes, density 0.1
+// - Dense graph: 1000 nodes, density 0.3
+// Each benchmark runs the three Dijkstra variants on the *same* generated graph.
 fn benchmark_reference(c: &mut Criterion) {
     let mut group = c.benchmark_group("reference");
-    group.sample_size(100); // Smaller sample for faster runs
+    group.sample_size(80); // Smaller sample for faster runs, but enough for stable ratios
 
-    // Medium-sized graph: 500 nodes, 10% density - representative workload
-    // Fixed seed ensures same graph every time for consistent benchmarking
-    let graph = generate_test_graph_with_seed(5000, 0.1, false, Some(42));
-    let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
+    let test_cases = vec![
+        (500, 0.1, "sparse_500_d0.1"),
+        (1000, 0.3, "dense_1000_d0.3"),
+    ];
 
-    group.bench_function("500_nodes_10pct_density", |b| {
-        b.iter(|| black_box(find_shortest_path(black_box(graph_refs.clone()))))
-    });
+    for (nodes, density, name) in test_cases {
+        // Generate a reproducible graph for this (nodes, density) pair
+        let graph = generate_test_graph_with_seed(nodes, density, false, Some(42));
+        let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
+
+        // Build adjacency list once, then reuse it for the Fibonacci variants
+        let parsed =
+            parse_graph(&graph_refs, true).expect("Failed to parse generated graph for benchmark");
+        let adj_list = parsed.graph;
+
+        // Binary heap: end-to-end (parse + Dijkstra via public API)
+        group.bench_with_input(
+            BenchmarkId::new("binary_heap", name),
+            &graph_refs,
+            |b, lines| {
+                b.iter(|| {
+                    black_box(find_shortest_path(black_box(
+                        lines.clone(), // Vec<&str> clone is cheap
+                    )))
+                })
+            },
+        );
+
+        // Safe Fibonacci heap: Dijkstra over pre-built adjacency list
+        group.bench_with_input(BenchmarkId::new("fib_safe", name), &adj_list, |b, graph| {
+            b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
+        });
+
+        // Unsafe Fibonacci heap: Dijkstra over same adjacency list
+        group.bench_with_input(
+            BenchmarkId::new("fib_unsafe", name),
+            &adj_list,
+            |b, graph| {
+                b.iter(|| {
+                    black_box(dijkstra_fibonacci_unsafe(
+                        0,
+                        graph.len() - 1,
+                        black_box(graph),
+                    ))
+                })
+            },
+        );
+    }
 
     group.finish();
 }

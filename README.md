@@ -216,7 +216,9 @@ The current implementation uses:
 - **Adjacency list**: O(V + E) - only stores actual edges
 - For a sparse graph with 1000 nodes and 5000 edges: matrix = 1M entries, list = 6000 entries
 
-**Fibonacci Heap Implementation:**
+### Fibonacci Heap Implementation and Results
+
+**Fibonacci heap implementations:**
 - Fibonacci heap implementations are available for benchmarking:
   - `dijkstra_fibonacci`: safe `Rc<RefCell>` heap (clear/ergonomic but slower)
   - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
@@ -227,6 +229,27 @@ The current implementation uses:
 - The unsafe variant uses raw pointers to avoid `RefCell` borrow conflicts and overhead, and implements `decrease_key` for optimal performance
 
 For very large graphs (10,000+ nodes), the Fibonacci heap implementation is recommended for best performance.
+
+**Summary of benchmark results (indicative):**
+
+These numbers come from the Criterion benchmark suite in this repository and are
+intended as an order-of-magnitude guide rather than exact guarantees:
+
+| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Safe Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** |
+|-----------------------|-----------|-------------|----------------------------|---------------------------|-------------------------------------|
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster             | ~10–20× faster                      |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster               | >100× faster                        |
+
+Exact timings may vary by machine and compiler version; for precise numbers,
+run the benchmarks locally:
+
+```bash
+cargo bench --bench dijkstra_bench -- reference heap_comparison
+```
+
+Criterion will generate detailed HTML reports (including plots) under
+`target/criterion/`, which you can open in a browser for full performance
+breakdowns.
 
 ## Module Layout
 
