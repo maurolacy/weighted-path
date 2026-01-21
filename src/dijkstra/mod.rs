@@ -8,6 +8,18 @@ pub use binary::dijkstra;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 
+/// Function type for Dijkstra implementations over an adjacency list.
+///
+/// Parameters:
+/// * `start` - Index of the source node in the adjacency list.
+/// * `end` - Index of the target node in the adjacency list.
+/// * `graph` - Adjacency list where `graph[u]` contains `(v, weight)` edges.
+///
+/// Returns:
+/// * A vector of node indices representing the shortest path from `start` to `end`
+///   (inclusive). Implementations should return an empty vector when no path exists.
+pub type DijkstraFn = fn(usize, usize, &[Vec<(usize, u32)>]) -> Vec<usize>;
+
 /// Parsed graph representation used by both the main API and benchmarks.
 pub struct ParsedGraph<'a> {
     /// Adjacency list: `graph[u]` contains `(v, weight)` edges.
@@ -131,6 +143,51 @@ pub fn parse_graph<'a>(
     })
 }
 
+fn find_shortest_path_with(
+    lines: Vec<&str>,
+    bidirectional: bool,
+    dijkstra_impl: DijkstraFn,
+) -> Result<String, String> {
+    if lines.is_empty() {
+        return Ok("-1".to_string());
+    }
+
+    let parsed = parse_graph(&lines, bidirectional)?;
+    let num_nodes = parsed.graph.len();
+
+    if num_nodes == 0 {
+        return Ok("-1".to_string());
+    }
+
+    if num_nodes == 1 {
+        return Ok(parsed
+            .nodes_reverse
+            .get(&0)
+            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
+            .to_string());
+    }
+
+    // Use the provided Dijkstra implementation
+    let path = dijkstra_impl(0, num_nodes - 1, &parsed.graph);
+
+    if path.len() <= 1 {
+        return Ok("-1".to_string());
+    }
+
+    // Map path node ids to nodes - optimized string building
+    let mut path_parts = Vec::with_capacity(path.len());
+    for node_id in path {
+        let node = parsed.nodes_reverse.get(&node_id).ok_or_else(|| {
+            format!(
+                "Internal error: node ID {} not found in reverse map",
+                node_id
+            )
+        })?;
+        path_parts.push(*node);
+    }
+    Ok(path_parts.join("-"))
+}
+
 /// Find the shortest path in a weighted graph using Dijkstra's algorithm.
 ///
 /// This is a convenience function that treats the graph as undirected (bidirectional edges).
@@ -142,7 +199,17 @@ pub fn parse_graph<'a>(
 /// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
 /// * `Err(message)` - Error message if input is invalid or no path exists
 pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
-    find_shortest_path_directed(lines, true) // Default to undirected/bidirectional
+    find_shortest_path_with(lines, true, dijkstra) // Default to undirected/bidirectional
+}
+
+/// Find the shortest path using the safe Fibonacci-heap Dijkstra implementation.
+pub fn find_shortest_path_fibonacci(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_with(lines, true, dijkstra_fibonacci)
+}
+
+/// Find the shortest path using the unsafe (raw pointer) Fibonacci-heap Dijkstra implementation.
+pub fn find_shortest_path_fibonacci_unsafe(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_with(lines, true, dijkstra_fibonacci_unsafe)
 }
 
 #[allow(clippy::doc_overindented_list_items)]
@@ -161,44 +228,7 @@ pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
 ) -> Result<String, String> {
-    if lines.is_empty() {
-        return Ok("-1".to_string());
-    }
-
-    let parsed = parse_graph(&lines, bidirectional)?;
-
-    let num_nodes = parsed.graph.len();
-    if num_nodes == 0 {
-        return Ok("-1".to_string());
-    }
-
-    if num_nodes == 1 {
-        return Ok(parsed
-            .nodes_reverse
-            .get(&0)
-            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
-            .to_string());
-    }
-
-    // Use binary-heap Dijkstra by default
-    let path = dijkstra(0, num_nodes - 1, &parsed.graph);
-
-    if path.len() <= 1 {
-        return Ok("-1".to_string());
-    }
-
-    // Map path node ids to nodes - optimized string building
-    let mut path_parts = Vec::with_capacity(path.len());
-    for node_id in path {
-        let node = parsed.nodes_reverse.get(&node_id).ok_or_else(|| {
-            format!(
-                "Internal error: node ID {} not found in reverse map",
-                node_id
-            )
-        })?;
-        path_parts.push(*node);
-    }
-    Ok(path_parts.join("-"))
+    find_shortest_path_with(lines, bidirectional, dijkstra)
 }
 
 #[cfg(test)]
