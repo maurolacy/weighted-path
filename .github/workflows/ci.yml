@@ -72,5 +72,7 @@ jobs:
             ${{ runner.os }}-cargo-bench-
 
       - name: Run reference and heap comparison benchmarks
-        run: cargo bench --bench dijkstra_bench -- reference heap_comparison
+        run: |
+          cargo bench --bench dijkstra_bench -- reference
+          cargo bench --bench dijkstra_bench -- heap_comparison
 
