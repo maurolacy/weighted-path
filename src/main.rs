@@ -62,12 +62,12 @@ fn run() -> Result<(), String> {
     // Find the shortest path using the selected heap / Dijkstra implementation
     let line_refs: Vec<&str> = lines.iter().map(|line| line.as_str()).collect();
     let result = match heap_impl.as_str() {
-        "binary" => find_shortest_path(line_refs),
+        "binary" | "bin" => find_shortest_path(line_refs),
         "fib" => find_shortest_path_fibonacci(line_refs),
         "fib-unsafe" => find_shortest_path_fibonacci_unsafe(line_refs),
         other => {
             return Err(format!(
-                "Unknown heap implementation '{}'. Expected one of: binary, fib, fib-unsafe",
+                "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe",
                 other
             ));
         }
