@@ -24,6 +24,42 @@ Or using the compiled binary:
 ./target/release/weighted_path <input_file>
 ```
 
+By default, the binary uses the **binary heap** implementation of Dijkstra.
+
+### Selecting the Dijkstra / heap implementation (lab mode)
+
+The binary also exposes a small "lab mode" flag that lets you choose which
+underlying Dijkstra / heap implementation to use. This is mainly intended for
+experimentation, benchmarking, and regression checks; for typical one-off runs
+you will not notice a visible difference, because **file I/O and graph parsing
+dominate the total runtime**.
+
+Usage:
+
+```bash
+weighted_path [--heap <binary|bin|fib|fib-unsafe>] <input_file>
+```
+
+- `binary` / `bin`: Standard binary-heap Dijkstra (default)
+- `fib`: Safe Fibonacci heap (`dijkstra_fibonacci`, `Rc<RefCell>`-based)
+- `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers)
+
+Examples:
+
+```bash
+# Default (binary heap)
+weighted_path graph.txt
+
+# Explicit binary heap
+weighted_path --heap binary graph.txt
+
+# Safe Fibonacci heap
+weighted_path --heap fib graph.txt
+
+# Unsafe Fibonacci heap
+weighted_path --heap fib-unsafe graph.txt
+```
+
 ## Input Format
 
 The input file should follow this format:
