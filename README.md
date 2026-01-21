@@ -73,7 +73,7 @@ The input file should follow this format:
 
 ### Example Input
 
-```
+```text
 4
 A
 B
@@ -91,7 +91,7 @@ The program outputs the shortest path from the first node to the last node as a 
 
 ### Example Output
 
-```
+```text
 A-B-D
 ```
 
@@ -123,12 +123,14 @@ The program uses Dijkstra's algorithm to find the shortest path:
 ## Test Data
 
 Test cases are located in the `testdata/` directory:
+
 - `input0.txt` through `input18.txt`: Test input files
 - `output0.txt` through `output18.txt`: Expected output files
 
 ## Error Handling
 
 The program validates input and provides clear error messages for:
+
 - Missing command-line arguments
 - File not found or unreadable
 - Invalid number format
@@ -142,14 +144,10 @@ The project includes benchmarking support using Criterion.rs to measure performa
 
 ### Generating Test Graphs
 
-A graph generator utility is included to create large graphs for benchmarking:
-
-```bash
-# Generate a graph with 1000 nodes and 10% edge density
-cargo run --bin generate_graph 1000 0.1 output.txt
-```
+A graph generator utility is included to create large graphs for benchmarking.
 
 **Graph Generator Usage:**
+
 ```bash
 cargo run --bin generate_graph <num_nodes> [edge_density] [output_file] [--directed]
 ```
@@ -160,6 +158,7 @@ cargo run --bin generate_graph <num_nodes> [edge_density] [output_file] [--direc
 - `--directed`: Generate a directed graph (default: undirected/bidirectional)
 
 **Examples:**
+
 ```bash
 # Generate undirected graph with 1000 nodes
 cargo run --bin generate_graph 1000 0.1 large_graph.txt
@@ -169,6 +168,7 @@ cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
 ```
 
 **Note on Directed vs Undirected:**
+
 - **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both A→B and B→A are created with weight `w`.
 - **Directed graphs**: The `find_shortest_path_directed` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
 - **Input format**: The same input can be processed as either directed or undirected by using `find_shortest_path_directed(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created.
@@ -189,6 +189,7 @@ cargo bench --bench dijkstra_bench -- dijkstra_algorithm
 ```
 
 The benchmarks test:
+
 - **Graph parsing performance** across different graph sizes (10, 50, 100, 500, 1000 nodes)
 - **Dijkstra algorithm performance** across different graph sizes (10, 50, 100, 500, 1000, 2000 nodes)
 - **Edge density impact** on performance (0.01, 0.05, 0.1, 0.2, 0.5 density with 500 nodes)
@@ -201,24 +202,16 @@ Benchmark results are saved in `target/criterion/` and include HTML reports with
 ### Performance Characteristics
 
 The current implementation uses:
+
 - **Adjacency list**: O(V + E) space complexity where V is vertices and E is edges (much better for sparse graphs)
 - **Dijkstra's algorithm**: O((V + E) log V) time complexity with binary heap
 - **Binary heap priority queue**: Used for efficient minimum distance extraction
-
-**Performance Optimizations:**
-- **Adjacency list**: Only stores actual edges, not empty slots. Much more efficient for sparse graphs (typical case)
-- **Early termination**: Algorithm stops immediately when the target node is reached
-- **Optimized string building**: Uses `join()` instead of repeated `format!()` calls
 - **Efficient priority queue**: Uses `Reverse` wrapper to convert BinaryHeap (max-heap) into a min-heap (zero-cost in release builds)
-
-**Space Comparison:**
-- **Adjacency matrix**: O(V²) - always allocates space for all possible edges
-- **Adjacency list**: O(V + E) - only stores actual edges
-- For a sparse graph with 1000 nodes and 5000 edges: matrix = 1M entries, list = 6000 entries
 
 ### Fibonacci Heap Implementation and Results
 
 **Fibonacci heap implementations:**
+
 - Fibonacci heap implementations are available for benchmarking:
   - `dijkstra_fibonacci`: safe `Rc<RefCell>` heap (clear/ergonomic but slower)
   - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
@@ -236,9 +229,9 @@ These numbers come from the Criterion benchmark suite in this repository and are
 intended as an order-of-magnitude guide rather than exact guarantees:
 
 | **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Safe Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** |
-|-----------------------|-----------|-------------|----------------------------|---------------------------|-------------------------------------|
-| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster             | ~10–20× faster                      |
-| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster               | >100× faster                        |
+|-----------------------|-----------|-------------|----------------------------|---------------------------|------------------------------------|
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster             | ~10–20× faster                     |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster               | >100× faster                       |
 
 Exact timings may vary by machine and compiler version; for precise numbers,
 run the benchmarks locally:
