@@ -84,18 +84,15 @@ fn main() {
     } else {
         "undirected"
     };
-    if output_file.is_none() {
+    if let Some(output_file) = output_file {
         eprintln!(
-            "\nGenerated {} graph with {} nodes and {} edges",
-            graph_type, num_nodes, edge_count
+            "Generated {} graph with {} nodes and {} edges to {}",
+            graph_type, num_nodes, edge_count, output_file
         );
     } else {
         eprintln!(
-            "Generated {} graph with {} nodes and {} edges to {}",
-            graph_type,
-            num_nodes,
-            edge_count,
-            output_file.unwrap()
+            "\nGenerated {} graph with {} nodes and {} edges",
+            graph_type, num_nodes, edge_count
         );
     }
 }
