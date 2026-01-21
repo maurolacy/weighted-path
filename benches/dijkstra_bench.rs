@@ -2,6 +2,7 @@ use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_ma
 use std::fs;
 use weighted_path::dijkstra::{
     dijkstra_fibonacci, dijkstra_fibonacci_unsafe, find_shortest_path, find_shortest_path_directed,
+    parse_graph,
 };
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
@@ -196,25 +197,10 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
         let graph = generate_test_graph_with_seed(nodes, density, false, Some(42));
         let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
 
-        // Build adjacency list for direct dijkstra calls
-        let mut adj_list = vec![Vec::new(); nodes];
-        for line in graph.iter().skip(1 + nodes) {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 3
-                && let (Some(i_str), Some(j_str)) =
-                    (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
-                && let (Ok(i), Ok(j), Ok(w)) = (
-                    i_str.parse::<usize>(),
-                    j_str.parse::<usize>(),
-                    parts[2].parse::<u32>(),
-                )
-                && i < nodes
-                && j < nodes
-            {
-                adj_list[i].push((j, w));
-                adj_list[j].push((i, w)); // bidirectional
-            }
-        }
+        // Build adjacency list for direct Dijkstra calls using the shared parser
+        let parsed =
+            parse_graph(&graph_refs, true).expect("Failed to parse generated graph for benchmark");
+        let adj_list = parsed.graph;
 
         // Benchmark binary heap (via find_shortest_path)
         group.bench_with_input(
@@ -248,26 +234,12 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
 
     for (nodes, density, name) in test_cases {
         let graph = generate_test_graph_with_seed(nodes, density, false, Some(42));
+        let graph_refs: Vec<&str> = graph.iter().map(|s| s.as_str()).collect();
 
-        // Build adjacency list
-        let mut adj_list = vec![Vec::new(); nodes];
-        for line in graph.iter().skip(1 + nodes) {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 3
-                && let (Some(i_str), Some(j_str)) =
-                    (parts[0].strip_prefix("Node"), parts[1].strip_prefix("Node"))
-                && let (Ok(i), Ok(j), Ok(w)) = (
-                    i_str.parse::<usize>(),
-                    j_str.parse::<usize>(),
-                    parts[2].parse::<u32>(),
-                )
-                && i < nodes
-                && j < nodes
-            {
-                adj_list[i].push((j, w));
-                adj_list[j].push((i, w)); // bidirectional
-            }
-        }
+        // Build adjacency list using the shared parser
+        let parsed =
+            parse_graph(&graph_refs, true).expect("Failed to parse generated graph for benchmark");
+        let adj_list = parsed.graph;
 
         // Verify both implementations produce the same result
         let res_safe = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);

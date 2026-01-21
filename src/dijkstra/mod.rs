@@ -8,38 +8,21 @@ pub use binary::dijkstra;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 
-/// Find the shortest path in a weighted graph using Dijkstra's algorithm.
-///
-/// This is a convenience function that treats the graph as undirected (bidirectional edges).
-///
-/// # Arguments
-/// * `lines` - Graph definition lines (see README for format)
-///
-/// # Returns
-/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
-/// * `Err(message)` - Error message if input is invalid or no path exists
-pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
-    find_shortest_path_directed(lines, true) // Default to undirected/bidirectional
+/// Parsed graph representation used by both the main API and benchmarks.
+pub struct ParsedGraph<'a> {
+    /// Adjacency list: `graph[u]` contains `(v, weight)` edges.
+    pub graph: Vec<Vec<(usize, u32)>>,
+    /// Reverse mapping from node index to original node name.
+    pub nodes_reverse: HashMap<usize, &'a str>,
 }
 
-#[allow(clippy::doc_overindented_list_items)]
-/// Find the shortest path in a weighted graph with explicit control over edge directionality.
-///
-/// # Arguments
-/// * `lines` - Graph definition lines (same format as `find_shortest_path`)
-/// * `bidirectional` - If `true`, edges are made bidirectional (undirected graph).
-///                     If `false`, edges are one-way only (directed graph).
-///                     When `true`, if both A->B and B->A are specified, the last weight wins.
-///
-/// # Returns
-/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
-/// * `Err(message)` - Error message if input is invalid or no path exists
-pub fn find_shortest_path_directed(
-    lines: Vec<&str>,
+/// Parse a weighted graph from lines into an adjacency list and reverse node map.
+pub fn parse_graph<'a>(
+    lines: &'a [&'a str],
     bidirectional: bool,
-) -> Result<String, String> {
+) -> Result<ParsedGraph<'a>, String> {
     if lines.is_empty() {
-        return Ok("-1".to_string());
+        return Err("No input lines provided".to_string());
     }
 
     // Number of nodes
@@ -49,10 +32,6 @@ pub fn find_shortest_path_directed(
             lines[0]
         )
     })? as usize;
-
-    if num_nodes == 0 {
-        return Ok("-1".to_string());
-    }
 
     // Validate we have enough lines for node names
     if lines.len() < 1 + num_nodes {
@@ -81,13 +60,6 @@ pub fn find_shortest_path_directed(
 
         nodes.insert(node_name, i - 1); // node id map
         nodes_reverse.insert(i - 1, node_name); // node map
-    }
-
-    if num_nodes == 1 {
-        return Ok(nodes_reverse
-            .get(&0)
-            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
-            .to_string());
     }
 
     // Build the adjacency list: Vec<Vec<(neighbor_index, weight)>>
@@ -153,8 +125,63 @@ pub fn find_shortest_path_directed(
         }
     }
 
+    Ok(ParsedGraph {
+        graph,
+        nodes_reverse,
+    })
+}
+
+/// Find the shortest path in a weighted graph using Dijkstra's algorithm.
+///
+/// This is a convenience function that treats the graph as undirected (bidirectional edges).
+///
+/// # Arguments
+/// * `lines` - Graph definition lines (see README for format)
+///
+/// # Returns
+/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
+/// * `Err(message)` - Error message if input is invalid or no path exists
+pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_directed(lines, true) // Default to undirected/bidirectional
+}
+
+#[allow(clippy::doc_overindented_list_items)]
+/// Find the shortest path in a weighted graph with explicit control over edge directionality.
+///
+/// # Arguments
+/// * `lines` - Graph definition lines (same format as `find_shortest_path`)
+/// * `bidirectional` - If `true`, edges are made bidirectional (undirected graph).
+///                     If `false`, edges are one-way only (directed graph).
+///                     When `true`, if both A->B and B->A are specified, the last weight wins.
+///
+/// # Returns
+/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
+/// * `Err(message)` - Error message if input is invalid or no path exists
+pub fn find_shortest_path_directed(
+    lines: Vec<&str>,
+    bidirectional: bool,
+) -> Result<String, String> {
+    if lines.is_empty() {
+        return Ok("-1".to_string());
+    }
+
+    let parsed = parse_graph(&lines, bidirectional)?;
+
+    let num_nodes = parsed.graph.len();
+    if num_nodes == 0 {
+        return Ok("-1".to_string());
+    }
+
+    if num_nodes == 1 {
+        return Ok(parsed
+            .nodes_reverse
+            .get(&0)
+            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
+            .to_string());
+    }
+
     // Use binary-heap Dijkstra by default
-    let path = dijkstra(0, num_nodes - 1, &graph);
+    let path = dijkstra(0, num_nodes - 1, &parsed.graph);
 
     if path.len() <= 1 {
         return Ok("-1".to_string());
@@ -163,7 +190,7 @@ pub fn find_shortest_path_directed(
     // Map path node ids to nodes - optimized string building
     let mut path_parts = Vec::with_capacity(path.len());
     for node_id in path {
-        let node = nodes_reverse.get(&node_id).ok_or_else(|| {
+        let node = parsed.nodes_reverse.get(&node_id).ok_or_else(|| {
             format!(
                 "Internal error: node ID {} not found in reverse map",
                 node_id
