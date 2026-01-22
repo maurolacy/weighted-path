@@ -37,12 +37,13 @@ dominate the total runtime**.
 Usage:
 
 ```bash
-weighted_path [--heap <binary|bin|fib|fib-unsafe>] <input_file>
+weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair>] <input_file>
 ```
 
 - `binary` / `bin`: Standard binary-heap Dijkstra (default)
 - `fib`: Safe Fibonacci heap (`dijkstra_fibonacci`, `Rc<RefCell>`-based)
 - `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers)
+- `pairing` / `pair`: Pairing heap (`dijkstra_pairing`)
 
 Examples:
 
@@ -58,6 +59,9 @@ weighted_path --heap fib graph.txt
 
 # Unsafe Fibonacci heap
 weighted_path --heap fib-unsafe graph.txt
+
+# Pairing heap
+weighted_path --heap pairing graph.txt
 ```
 
 ## Input Format
@@ -208,30 +212,36 @@ The current implementation uses:
 - **Binary heap priority queue**: Used for efficient minimum distance extraction
 - **Efficient priority queue**: Uses `Reverse` wrapper to convert BinaryHeap (max-heap) into a min-heap (zero-cost in release builds)
 
-### Fibonacci Heap Implementation and Results
+### Advanced Heap Implementations
 
-**Fibonacci heap implementations:**
+**Multiple heap implementations are available:**
 
-- Fibonacci heap implementations are available for benchmarking:
-  - `dijkstra_fibonacci`: safe `Rc<RefCell>` heap (clear/ergonomic but slower)
+- **Binary heap** (`dijkstra_binary`): Standard implementation, good general-purpose choice
+- **Fibonacci heap** implementations:
+  - `dijkstra_fibonacci`: safe `Rc<RefCell>` heap (memory-safe but slower)
   - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
-- Provides O(E + V log V) amortized time complexity vs O((V + E) log V) for binary heap
-- **Performance improvements observed:**
-  - ~20x faster for sparse graphs (500 nodes)
-  - >100x faster for dense graphs (1000 nodes)
-- The unsafe variant uses raw pointers to avoid `RefCell` borrow conflicts and overhead, and implements `decrease_key` for optimal performance
+- **Pairing heap** (`dijkstra_pairing`): Simpler than Fibonacci, often faster in practice
 
-For very large graphs (10,000+ nodes), the Fibonacci heap implementation is recommended for best performance.
+**Complexity:**
+- Binary heap: O((V + E) log V)
+- Fibonacci/Pairing heaps: O(E + V log V) amortized
+
+**Performance characteristics:**
+- Fibonacci and Pairing heaps provide significant speedups on dense graphs
+- Pairing heap often outperforms Fibonacci heap in practice due to lower constant factors
+- The unsafe Fibonacci variant is fastest but requires careful memory management
+
+For very large graphs (10,000+ nodes), the advanced heap implementations are recommended for best performance.
 
 **Summary of benchmark results (indicative):**
 
 These numbers come from the Criterion benchmark suite in this repository and are
 intended as an order-of-magnitude guide rather than exact guarantees:
 
-| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Safe Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** |
-|-----------------------|-----------|-------------|----------------------------|---------------------------|------------------------------------|
-| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster             | ~10–20× faster                     |
-| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster               | >100× faster                       |
+| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Safe Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** |
+|-----------------------|-----------|-------------|----------------------------|---------------------------|------------------------------------|------------------------------|
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster             | ~10–20× faster                     | ~20–40× faster               |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster               | >100× faster                       | ~35× faster                  |
 
 Exact timings may vary by machine and compiler version; for precise numbers,
 run the benchmarks locally:
@@ -246,7 +256,19 @@ breakdowns.
 
 ## Module Layout
 
-- `src/dijkstra/`: Dijkstra implementations (binary heap, Fibonacci heap safe/unsafe) + parsing/validation + tests
+- `src/dijkstra/`: Core Dijkstra implementation and heap-specific wrappers
+  - `mod.rs`: Generic `dijkstra<Q: PriorityQueue>` function (works with any heap)
+  - `heap_trait.rs`: `PriorityQueue` trait for abstracting over heap implementations
+  - `binary.rs`: Binary heap wrapper (`dijkstra_binary`)
+  - `fib.rs`: Safe Fibonacci heap wrapper (`dijkstra_fibonacci`)
+  - `fib_unsafe.rs`: Unsafe Fibonacci heap wrapper (`dijkstra_fibonacci_unsafe`)
+  - `pairing.rs`: Pairing heap wrapper (`dijkstra_pairing`)
+  - Also contains graph parsing, validation, and tests
 - `src/fibonacci/`: Fibonacci heap implementations
   - `heap.rs`: safe heap (`Node`, `FibonacciHeap`)
   - `heap_unsafe.rs`: unsafe heap (`UnsafeNode`, `UnsafeFibonacciHeap`)
+- `src/pairing/`: Pairing heap implementation
+  - `heap.rs`: pairing heap (`Node`, `PairingHeap`)
+
+**Architecture:**
+The project uses a trait-based design where all heap types implement the `PriorityQueue` trait, allowing a single generic Dijkstra implementation to work with any heap type. This provides code reuse while maintaining zero-cost abstractions through monomorphization.
