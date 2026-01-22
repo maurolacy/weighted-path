@@ -4,34 +4,16 @@ use std::rc::Rc;
 
 use crate::dijkstra::heap_trait::PriorityQueue;
 
-/// Wrapper around `PairingHeap` to implement `PriorityQueue` trait.
-pub struct PairingHeapPQ {
-    heap: PairingHeap,
-}
-
-impl Default for PairingHeapPQ {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl PairingHeapPQ {
-    pub fn new() -> Self {
-        PairingHeapPQ {
-            heap: PairingHeap::new(),
-        }
-    }
-}
-
-impl PriorityQueue for PairingHeapPQ {
+// Implement PriorityQueue trait directly on PairingHeap
+impl PriorityQueue for PairingHeap {
     type Handle = Rc<RefCell<crate::pairing::Node>>;
 
     fn insert(&mut self, key: u32, node_id: usize) -> Self::Handle {
-        self.heap.insert(key, node_id)
+        PairingHeap::insert(self, key, node_id)
     }
 
     fn extract_min(&mut self) -> Option<(u32, usize)> {
-        self.heap.extract_min()
+        PairingHeap::extract_min(self)
     }
 
     fn supports_decrease_key(&self) -> bool {
@@ -39,7 +21,7 @@ impl PriorityQueue for PairingHeapPQ {
     }
 
     fn decrease_key(&mut self, handle: &Self::Handle, new_key: u32) {
-        self.heap.decrease_key(handle, new_key);
+        PairingHeap::decrease_key(self, handle, new_key);
     }
 }
 
@@ -50,5 +32,5 @@ impl PriorityQueue for PairingHeapPQ {
 /// constant factors and simpler operations.
 /// This is a thin wrapper around the generic Dijkstra implementation.
 pub fn dijkstra_pairing(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
-    crate::dijkstra::generic::dijkstra_generic(start, end, graph, PairingHeapPQ::new())
+    crate::dijkstra::generic::dijkstra_generic(start, end, graph, PairingHeap::new())
 }

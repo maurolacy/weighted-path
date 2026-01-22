@@ -2,34 +2,16 @@ use crate::fibonacci::{UnsafeFibonacciHeap, UnsafeNode};
 
 use crate::dijkstra::heap_trait::PriorityQueue;
 
-/// Wrapper around `UnsafeFibonacciHeap` to implement `PriorityQueue` trait.
-pub struct UnsafeFibonacciHeapPQ {
-    heap: UnsafeFibonacciHeap,
-}
-
-impl Default for UnsafeFibonacciHeapPQ {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl UnsafeFibonacciHeapPQ {
-    pub fn new() -> Self {
-        UnsafeFibonacciHeapPQ {
-            heap: UnsafeFibonacciHeap::new(),
-        }
-    }
-}
-
-impl PriorityQueue for UnsafeFibonacciHeapPQ {
+// Implement PriorityQueue trait directly on UnsafeFibonacciHeap
+impl PriorityQueue for UnsafeFibonacciHeap {
     type Handle = *mut UnsafeNode;
 
     fn insert(&mut self, key: u32, node_id: usize) -> Self::Handle {
-        self.heap.insert(key, node_id)
+        UnsafeFibonacciHeap::insert(self, key, node_id)
     }
 
     fn extract_min(&mut self) -> Option<(u32, usize)> {
-        self.heap.extract_min()
+        UnsafeFibonacciHeap::extract_min(self)
     }
 
     fn supports_decrease_key(&self) -> bool {
@@ -38,7 +20,7 @@ impl PriorityQueue for UnsafeFibonacciHeapPQ {
 
     fn decrease_key(&mut self, handle: &Self::Handle, new_key: u32) {
         // Note: handle is already a pointer, so we pass it directly
-        self.heap.decrease_key(*handle, new_key);
+        UnsafeFibonacciHeap::decrease_key(self, *handle, new_key);
     }
 }
 
@@ -51,5 +33,5 @@ pub fn dijkstra_fibonacci_unsafe(
     end: usize,
     graph: &[Vec<(usize, u32)>],
 ) -> Vec<usize> {
-    crate::dijkstra::generic::dijkstra_generic(start, end, graph, UnsafeFibonacciHeapPQ::new())
+    crate::dijkstra::generic::dijkstra_generic(start, end, graph, UnsafeFibonacciHeap::new())
 }
