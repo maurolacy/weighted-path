@@ -1,12 +1,14 @@
 pub mod binary;
 pub mod fib;
 pub mod fib_unsafe;
+pub mod pairing;
 
 use std::collections::HashMap;
 
 pub use binary::dijkstra;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
+pub use pairing::dijkstra_pairing;
 
 /// Function type for Dijkstra implementations over an adjacency list.
 ///
@@ -210,6 +212,11 @@ pub fn find_shortest_path_fibonacci(lines: Vec<&str>) -> Result<String, String> 
 /// Find the shortest path using the unsafe (raw pointer) Fibonacci-heap Dijkstra implementation.
 pub fn find_shortest_path_fibonacci_unsafe(lines: Vec<&str>) -> Result<String, String> {
     find_shortest_path_with(lines, true, dijkstra_fibonacci_unsafe)
+}
+
+/// Find the shortest path using the Pairing-heap Dijkstra implementation.
+pub fn find_shortest_path_pairing(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_with(lines, true, dijkstra_pairing)
 }
 
 #[allow(clippy::doc_overindented_list_items)]
