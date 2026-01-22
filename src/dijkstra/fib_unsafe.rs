@@ -33,5 +33,5 @@ pub fn dijkstra_fibonacci_unsafe(
     end: usize,
     graph: &[Vec<(usize, u32)>],
 ) -> Vec<usize> {
-    crate::dijkstra::generic::dijkstra_generic(start, end, graph, UnsafeFibonacciHeap::new())
+    crate::dijkstra::dijkstra(start, end, graph, UnsafeFibonacciHeap::new())
 }

@@ -32,5 +32,5 @@ impl PriorityQueue for PairingHeap {
 /// constant factors and simpler operations.
 /// This is a thin wrapper around the generic Dijkstra implementation.
 pub fn dijkstra_pairing(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
-    crate::dijkstra::generic::dijkstra_generic(start, end, graph, PairingHeap::new())
+    crate::dijkstra::dijkstra(start, end, graph, PairingHeap::new())
 }

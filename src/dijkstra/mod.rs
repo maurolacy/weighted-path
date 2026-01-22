@@ -1,13 +1,14 @@
 pub mod binary;
 pub mod fib;
 pub mod fib_unsafe;
-mod generic;
 mod heap_trait;
 pub mod pairing;
 
 use std::collections::HashMap;
 
-pub use binary::dijkstra;
+use heap_trait::PriorityQueue;
+
+pub use binary::dijkstra_binary;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 pub use pairing::dijkstra_pairing;
@@ -147,6 +148,95 @@ pub fn parse_graph<'a>(
     })
 }
 
+/// Core Dijkstra's algorithm implementation that works with any `PriorityQueue`.
+///
+/// This is the generic implementation that all specific heap variants use.
+/// It handles both heaps that support `decrease_key` and those that don't.
+///
+/// For convenience, specific heap variants are available:
+/// - `dijkstra_binary` - Binary heap
+/// - `dijkstra_fibonacci` - Safe Fibonacci heap
+/// - `dijkstra_fibonacci_unsafe` - Unsafe Fibonacci heap
+/// - `dijkstra_pairing` - Pairing heap
+pub fn dijkstra<Q: PriorityQueue>(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+    mut heap: Q,
+) -> Vec<usize> {
+    let mut distances = vec![u32::MAX; graph.len()];
+    distances[start] = 0;
+    let mut previous = vec![None; graph.len()];
+
+    // Check once if heap supports decrease_key (compile-time constant, but checked at runtime)
+    let supports_decrease_key = heap.supports_decrease_key();
+
+    // Track handles for decrease_key operations (only used if heap supports it)
+    let mut handles: Vec<Option<Q::Handle>> = if supports_decrease_key {
+        vec![None; graph.len()]
+    } else {
+        Vec::new() // Don't allocate if not needed
+    };
+
+    // Insert start node
+    let handle = heap.insert(0, start);
+    if supports_decrease_key {
+        handles[start] = Some(handle);
+    }
+
+    while let Some((current_distance, current_node)) = heap.extract_min() {
+        // Skip if we've already found a better path (duplicate entry)
+        // This happens for heaps that don't support decrease_key (like BinaryHeap)
+        if distances[current_node] < current_distance {
+            continue;
+        }
+
+        // Early termination: if we've reached the target, we're done
+        if current_node == end {
+            break;
+        }
+
+        // Process neighbors
+        for &(neighbor, weight) in &graph[current_node] {
+            let new_distance = current_distance + weight;
+            if new_distance < distances[neighbor] {
+                distances[neighbor] = new_distance;
+                previous[neighbor] = Some(current_node);
+
+                // Use decrease_key if heap supports it and node is already in heap
+                if supports_decrease_key {
+                    if let Some(ref handle) = handles[neighbor] {
+                        heap.decrease_key(handle, new_distance);
+                    } else {
+                        let handle = heap.insert(new_distance, neighbor);
+                        handles[neighbor] = Some(handle);
+                    }
+                } else {
+                    // For heaps without decrease_key (like BinaryHeap), always re-insert
+                    // Duplicates will be filtered out by the check above
+                    heap.insert(new_distance, neighbor);
+                }
+            }
+        }
+    }
+
+    // Reconstruct path
+    let mut path = Vec::new();
+    let mut current = end;
+
+    if distances[end] == u32::MAX {
+        return path; // No path found
+    }
+
+    while let Some(prev) = previous[current] {
+        path.push(current);
+        current = prev;
+    }
+    path.push(start);
+    path.reverse();
+    path
+}
+
 fn find_shortest_path_with(
     lines: Vec<&str>,
     bidirectional: bool,
@@ -203,7 +293,7 @@ fn find_shortest_path_with(
 /// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
 /// * `Err(message)` - Error message if input is invalid or no path exists
 pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
-    find_shortest_path_with(lines, true, dijkstra) // Default to undirected/bidirectional
+    find_shortest_path_with(lines, true, dijkstra_binary) // Default to undirected/bidirectional
 }
 
 /// Find the shortest path using the safe Fibonacci-heap Dijkstra implementation.
@@ -237,7 +327,7 @@ pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
 ) -> Result<String, String> {
-    find_shortest_path_with(lines, bidirectional, dijkstra)
+    find_shortest_path_with(lines, bidirectional, dijkstra_binary)
 }
 
 #[cfg(test)]
@@ -368,7 +458,7 @@ mod tests {
             vec![(0, 4), (3, 5)], // node 2
             vec![(1, 1), (2, 5)], // node 3
         ];
-        let path_binary = dijkstra(0, 3, &graph);
+        let path_binary = dijkstra_binary(0, 3, &graph);
         let path_fib = dijkstra_fibonacci(0, 3, &graph);
         assert_eq!(path_binary, path_fib);
         assert_eq!(path_binary, vec![0, 1, 3]);
@@ -417,7 +507,7 @@ mod tests {
         ];
 
         for (graph, start, end, expected_path) in test_cases {
-            let path_binary = dijkstra(start, end, &graph);
+            let path_binary = dijkstra_binary(start, end, &graph);
             let path_fib = dijkstra_fibonacci(start, end, &graph);
 
             assert_eq!(
