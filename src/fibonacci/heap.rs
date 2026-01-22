@@ -224,12 +224,7 @@ impl FibonacciHeap {
         y.borrow_mut().parent = Some(Rc::downgrade(x));
         {
             let mut x_borrow = x.borrow_mut();
-            if x_borrow.child.is_none() {
-                x_borrow.child = Some(Rc::clone(y));
-                y.borrow_mut().left = Some(Rc::clone(y));
-                y.borrow_mut().right = Some(Rc::clone(y));
-            } else {
-                let child = x_borrow.child.as_ref().unwrap();
+            if let Some(child) = &x_borrow.child {
                 let child_left = child.borrow().left.clone();
                 child.borrow_mut().left = Some(Rc::clone(y));
                 y.borrow_mut().right = Some(Rc::clone(child));
@@ -237,6 +232,10 @@ impl FibonacciHeap {
                 if let Some(left) = child_left {
                     left.borrow_mut().right = Some(Rc::clone(y));
                 }
+            } else {
+                x_borrow.child = Some(Rc::clone(y));
+                y.borrow_mut().left = Some(Rc::clone(y));
+                y.borrow_mut().right = Some(Rc::clone(y));
             }
             x_borrow.degree += 1;
         }
