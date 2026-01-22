@@ -1,8 +1,8 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use weighted_path::dijkstra::{
-    dijkstra_fibonacci, dijkstra_fibonacci_unsafe, find_shortest_path, find_shortest_path_directed,
-    parse_graph,
+    dijkstra_fibonacci, dijkstra_fibonacci_unsafe, dijkstra_pairing, find_shortest_path,
+    find_shortest_path_directed, parse_graph,
 };
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
@@ -219,6 +219,11 @@ fn benchmark_reference(c: &mut Criterion) {
                 })
             },
         );
+
+        // Pairing heap: Dijkstra over same adjacency list
+        group.bench_with_input(BenchmarkId::new("pairing", name), &adj_list, |b, graph| {
+            b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph))))
+        });
     }
 
     group.finish();
@@ -260,6 +265,13 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
                 b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
             },
         );
+
+        // Benchmark Pairing heap
+        group.bench_with_input(
+            BenchmarkId::new("pairing_heap", name),
+            &adj_list,
+            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
+        );
     }
 
     group.finish();
@@ -284,14 +296,20 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             parse_graph(&graph_refs, true).expect("Failed to parse generated graph for benchmark");
         let adj_list = parsed.graph;
 
-        // Verify both implementations produce the same result
+        // Verify all implementations produce the same result
         let res_safe = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
         let res_unsafe = dijkstra_fibonacci_unsafe(0, adj_list.len() - 1, &adj_list);
+        let res_pairing = dijkstra_pairing(0, adj_list.len() - 1, &adj_list);
 
         assert_eq!(
             res_unsafe, res_safe,
             "Mismatch for {}: unsafe={:?}, safe={:?}",
             name, res_unsafe, res_safe
+        );
+        assert_eq!(
+            res_pairing, res_safe,
+            "Mismatch for {}: pairing={:?}, safe={:?}",
+            name, res_pairing, res_safe
         );
 
         // Benchmark unsafe (raw pointers) version
@@ -316,6 +334,13 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             |b, graph| {
                 b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
             },
+        );
+
+        // Benchmark Pairing heap
+        group.bench_with_input(
+            BenchmarkId::new("pairing_heap", name),
+            &adj_list,
+            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
         );
     }
 
