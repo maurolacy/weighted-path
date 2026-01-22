@@ -1,52 +1,57 @@
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
+use crate::dijkstra::heap_trait::PriorityQueue;
+
+/// Wrapper around `BinaryHeap` to implement `PriorityQueue` trait.
+///
+/// `BinaryHeap` is a max-heap, so we use `Reverse` to make it a min-heap.
+/// This implementation doesn't support `decrease_key`, so nodes are re-inserted
+/// when their distance decreases (which is why we skip duplicates in Dijkstra).
+pub struct BinaryHeapPQ {
+    heap: BinaryHeap<Reverse<(u32, usize)>>,
+}
+
+impl Default for BinaryHeapPQ {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BinaryHeapPQ {
+    pub fn new() -> Self {
+        BinaryHeapPQ {
+            heap: BinaryHeap::new(),
+        }
+    }
+}
+
+impl PriorityQueue for BinaryHeapPQ {
+    type Handle = ();
+
+    fn insert(&mut self, key: u32, node_id: usize) -> Self::Handle {
+        self.heap.push(Reverse((key, node_id)));
+    }
+
+    fn extract_min(&mut self) -> Option<(u32, usize)> {
+        self.heap
+            .pop()
+            .map(|Reverse((key, node_id))| (key, node_id))
+    }
+
+    fn supports_decrease_key(&self) -> bool {
+        false
+    }
+
+    fn decrease_key(&mut self, _handle: &Self::Handle, _new_key: u32) {
+        // BinaryHeap doesn't support decrease_key, so this is never called
+        unreachable!("BinaryHeap doesn't support decrease_key")
+    }
+}
+
 /// Core Dijkstra implementation using a binary heap.
+///
+/// This is a thin wrapper around the generic Dijkstra implementation.
 pub fn dijkstra(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
-    let mut distances = vec![u32::MAX; graph.len()];
-    distances[start] = 0;
-    let mut previous = vec![None; graph.len()];
-
-    let mut heap = BinaryHeap::new();
-
-    // Insert start node
-    heap.push((Reverse(0), start));
-
-    while let Some((Reverse(current_distance), current_node)) = heap.pop() {
-        // Skip if we've already found a better path
-        if distances[current_node] < current_distance {
-            continue;
-        }
-
-        // Early termination: if we've reached the target, we're done
-        if current_node == end {
-            break;
-        }
-
-        // Process neighbors
-        for &(neighbor, weight) in &graph[current_node] {
-            let new_distance = current_distance + weight;
-            if new_distance < distances[neighbor] {
-                distances[neighbor] = new_distance;
-                previous[neighbor] = Some(current_node);
-                heap.push((Reverse(new_distance), neighbor));
-            }
-        }
-    }
-
-    // Reconstruct path
-    let mut path = Vec::new();
-    let mut current = end;
-
-    if distances[end] == u32::MAX {
-        return path; // No path found
-    }
-
-    while let Some(prev) = previous[current] {
-        path.push(current);
-        current = prev;
-    }
-    path.push(start);
-    path.reverse();
-    path
+    crate::dijkstra::generic::dijkstra_generic(start, end, graph, BinaryHeapPQ::new())
 }

@@ -1,6 +1,8 @@
 pub mod binary;
 pub mod fib;
 pub mod fib_unsafe;
+mod generic;
+mod heap_trait;
 pub mod pairing;
 
 use std::collections::HashMap;
