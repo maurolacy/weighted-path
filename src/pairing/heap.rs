@@ -87,19 +87,13 @@ impl PairingHeap {
         node.borrow_mut().key = new_key;
 
         // If node is not the root, cut it from its parent and merge with root
-        let is_root = {
-            if let Some(ref root) = self.root {
-                Rc::ptr_eq(root, node)
-            } else {
-                false
-            }
-        };
-
-        if !is_root {
-            self.cut_and_merge(node);
-        } else {
+        if let Some(ref root) = self.root
+            && Rc::ptr_eq(root, node)
+        {
             // If it's the root, we just need to update it (already done above)
             // No need to do anything else
+        } else {
+            self.cut_and_merge(node);
         }
     }
 
