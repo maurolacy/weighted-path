@@ -1,8 +1,8 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 use weighted_path::dijkstra::{
-    dijkstra_fibonacci, dijkstra_fibonacci_unsafe, dijkstra_pairing, find_shortest_path,
-    find_shortest_path_directed, parse_graph,
+    dijkstra_fibonacci, dijkstra_fibonacci_unsafe, dijkstra_pairing, dijkstra_radix,
+    find_shortest_path, find_shortest_path_directed, parse_graph,
 };
 
 fn generate_test_graph(num_nodes: usize, edge_density: f64, directed: bool) -> Vec<String> {
@@ -224,6 +224,11 @@ fn benchmark_reference(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("pairing", name), &adj_list, |b, graph| {
             b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph))))
         });
+
+        // Radix heap: Dijkstra over same adjacency list
+        group.bench_with_input(BenchmarkId::new("radix", name), &adj_list, |b, graph| {
+            b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph))))
+        });
     }
 
     group.finish();
@@ -272,6 +277,13 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
             &adj_list,
             |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
         );
+
+        // Benchmark Radix heap
+        group.bench_with_input(
+            BenchmarkId::new("radix_heap", name),
+            &adj_list,
+            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph)))),
+        );
     }
 
     group.finish();
@@ -300,6 +312,7 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
         let res_safe = dijkstra_fibonacci(0, adj_list.len() - 1, &adj_list);
         let res_unsafe = dijkstra_fibonacci_unsafe(0, adj_list.len() - 1, &adj_list);
         let res_pairing = dijkstra_pairing(0, adj_list.len() - 1, &adj_list);
+        let res_radix = dijkstra_radix(0, adj_list.len() - 1, &adj_list);
 
         assert_eq!(
             res_unsafe, res_safe,
@@ -310,6 +323,11 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             res_pairing, res_safe,
             "Mismatch for {}: pairing={:?}, safe={:?}",
             name, res_pairing, res_safe
+        );
+        assert_eq!(
+            res_radix, res_safe,
+            "Mismatch for {}: radix={:?}, safe={:?}",
+            name, res_radix, res_safe
         );
 
         // Benchmark unsafe (raw pointers) version
@@ -341,6 +359,13 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
             BenchmarkId::new("pairing_heap", name),
             &adj_list,
             |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
+        );
+
+        // Benchmark Radix heap
+        group.bench_with_input(
+            BenchmarkId::new("radix_heap", name),
+            &adj_list,
+            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph)))),
         );
     }
 
