@@ -40,11 +40,11 @@ Usage:
 weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair|radix>] <input_file>
 ```
 
-- `binary` / `bin`: Standard binary-heap Dijkstra (default)
-- `fib`: Fibonacci heap (`dijkstra_fibonacci`, `Rc<RefCell>`-based)
-- `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers)
-- `pairing` / `pair`: Pairing heap (`dijkstra_pairing`)
-- `radix`: Radix heap (`dijkstra_radix`)
+- `binary` / `bin`: Standard binary-heap Dijkstra (default).
+- `fib`: Fibonacci heap (`dijkstra_fibonacci`, `Rc<RefCell>`-based).
+- `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers).
+- `pairing` / `pair`: Pairing heap (`dijkstra_pairing`).
+- `radix`: Radix heap (`dijkstra_radix`).
 
 Examples:
 
@@ -72,12 +72,12 @@ weighted_path --heap radix graph.txt
 
 The input file should follow this format:
 
-1. **First line**: Number of nodes (N) as a positive integer
-2. **Next N lines**: Node names (one per line)
-3. **Remaining lines**: Edges in the format `node1|node2|weight`
-   - `node1` and `node2` are node names (must match nodes defined above)
-   - `weight` is a positive integer representing the edge weight
-   - Edges are bidirectional
+1. **First line**: Number of nodes (N) as a positive integer.
+2. **Next N lines**: Node names (one per line).
+3. **Remaining lines**: Edges in the format `node1|node2|weight`.
+   - `node1` and `node2` are node names (must match nodes defined above).
+   - `weight` is a positive integer representing the edge weight.
+   - Edges are bidirectional.
 
 ### Example Input
 
@@ -117,34 +117,34 @@ This runs unit tests, including file-based test cases in `testdata/` (when prese
 
 The program uses Dijkstra's algorithm to find the shortest path:
 
-1. Parse the graph and build an adjacency list
-2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node
-3. Return the path as a dash-separated string, or `-1` if no path exists
+1. Parse the graph and build an adjacency list.
+2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node.
+3. Return the path as a dash-separated string, or `-1` if no path exists.
 
 ## Edge Cases
 
-- **Single node**: Returns the node name itself
-- **No path exists**: Returns `-1`
-- **Empty input**: Returns `-1`
-- **Zero nodes**: Returns `-1`
+- **Single node**: Returns the node name itself.
+- **No path exists**: Returns `-1`.
+- **Empty input**: Returns `-1`.
+- **Zero nodes**: Returns `-1`.
 
 ## Test Data
 
 Test cases are located in the `testdata/` directory:
 
-- `input0.txt` through `input18.txt`: Test input files
-- `output0.txt` through `output18.txt`: Expected output files
+- `input0.txt` through `input18.txt`: Test input files.
+- `output0.txt` through `output18.txt`: Expected output files.
 
 ## Error Handling
 
 The program validates input and provides clear error messages for:
 
-- Missing command-line arguments
-- File not found or unreadable
-- Invalid number format
-- Missing nodes in edge definitions
-- Malformed edge lines
-- Duplicate node names
+- Missing command-line arguments.
+- File not found or unreadable.
+- Invalid number format.
+- Missing nodes in edge definitions.
+- Malformed edge lines.
+- Duplicate node names.
 
 ## Benchmarking
 
@@ -160,10 +160,10 @@ A graph generator utility is included to create large graphs for benchmarking.
 cargo run --bin generate_graph <num_nodes> [edge_density] [output_file] [--directed]
 ```
 
-- `num_nodes`: Number of nodes in the graph (required)
-- `edge_density`: Probability of edge between nodes (0.0-1.0, default: 0.1)
-- `output_file`: Output file path (default: stdout)
-- `--directed`: Generate a directed graph (default: undirected/bidirectional)
+- `num_nodes`: Number of nodes in the graph (required).
+- `edge_density`: Probability of edge between nodes (0.0-1.0, default: 0.1).
+- `output_file`: Output file path (default: stdout).
+- `--directed`: Generate a directed graph (default: undirected/bidirectional).
 
 **Examples:**
 
@@ -177,7 +177,7 @@ cargo run --bin generate_graph 500 0.1 directed_graph.txt --directed
 
 **Note on Directed vs Undirected:**
 
-- **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both A→B and B→A are created with weight `w`.
+- **Default behavior**: By default, edges are treated as bidirectional (undirected). When an edge `A|B|w` is specified, both `A→B` and `B→A` are created with weight `w`.
 - **Directed graphs**: The `find_shortest_path_directed` function accepts a `bidirectional` boolean parameter. When `false`, edges are one-way only (A→B exists, but B→A does not unless explicitly specified).
 - **Input format**: The same input can be processed as either directed or undirected by using `find_shortest_path_directed(lines, bidirectional)`. If a directed graph is processed with `bidirectional=true`, reverse edges will be created.
 - **Benchmarking**: This allows testing the same graph structure in both modes for fair performance comparison. The benchmark suite includes a `directed_vs_undirected` benchmark that tests the same graph with both settings.
@@ -198,12 +198,12 @@ cargo bench --bench dijkstra_bench -- dijkstra_algorithm
 
 The benchmarks test:
 
-- **Graph parsing performance** across different graph sizes (10, 50, 100, 500, 1000 nodes)
-- **Dijkstra algorithm performance** across different graph sizes (10, 50, 100, 500, 1000, 2000 nodes)
-- **Edge density impact** on performance (0.01, 0.05, 0.1, 0.2, 0.5 density with 500 nodes)
-- **Directed vs Undirected graphs** comparison: Same graph structure tested with `bidirectional=true` (undirected) and `bidirectional=false` (directed) for fair comparison
-- **Directed graph performance** across different sizes (100, 500, 1000 nodes)
-- **Real-world graph performance** using actual test files
+- **Graph parsing performance** across different graph sizes (10, 50, 100, 500, 1000 nodes).
+- **Dijkstra algorithm performance** across different graph sizes (10, 50, 100, 500, 1000, 2000 nodes).
+- **Edge density impact** on performance (0.01, 0.05, 0.1, 0.2, 0.5 density with 500 nodes).
+- **Directed vs Undirected graphs** comparison: Same graph structure tested with `bidirectional=true` (undirected) and `bidirectional=false` (directed) for fair comparison.
+- **Directed graph performance** across different sizes (100, 500, 1000 nodes).
+- **Real-world graph performance** using actual test files.
 
 Benchmark results are saved in `target/criterion/` and include HTML reports with detailed statistics and graphs.
 
@@ -211,35 +211,35 @@ Benchmark results are saved in `target/criterion/` and include HTML reports with
 
 The current implementation uses:
 
-- **Adjacency list**: O(V + E) space complexity where V is vertices and E is edges (much better for sparse graphs)
-- **Dijkstra's algorithm**: O((V + E) log V) time complexity with binary heap
-- **Binary heap priority queue**: Used for efficient minimum distance extraction
-- **Efficient priority queue**: Uses `Reverse` wrapper to convert BinaryHeap (max-heap) into a min-heap (zero-cost in release builds)
+- **Adjacency list**: O(V + E) space complexity where V is vertices and E is edges (much better for sparse graphs).
+- **Dijkstra's algorithm**: O((V + E) log V) time complexity with binary heap.
+- **Binary heap priority queue**: Used for efficient minimum distance extraction.
+- **Efficient priority queue**: Uses `Reverse` wrapper to convert BinaryHeap (max-heap) into a min-heap (zero-cost in release builds).
 
 ### Advanced Heap Implementations
 
 **Multiple heap implementations are available:**
 
-- **Binary heap** (`dijkstra_binary`): Standard implementation, good general-purpose choice
+- **Binary heap** (`dijkstra_binary`): Standard implementation, good general-purpose choice.
 - **Fibonacci heap** implementations:
-  - `dijkstra_fibonacci`: `Rc<RefCell>`-based heap (memory-safe but slower)
-  - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
-- **Pairing heap** (`dijkstra_pairing`): Simpler than Fibonacci, often faster in practice
-- **Radix heap** (`dijkstra_radix`): Specialized for non-decreasing integer keys, excellent for Dijkstra's algorithm
+  - `dijkstra_fibonacci`: `Rc<RefCell>`-based heap (memory-safe but slower).
+  - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`).
+- **Pairing heap** (`dijkstra_pairing`): Simpler than Fibonacci, often faster in practice.
+- **Radix heap** (`dijkstra_radix`): Specialized for non-decreasing integer keys, excellent for Dijkstra's algorithm.
 
 **Complexity:**
 
-- Binary heap: O((V + E) log V)
-- Fibonacci heap: O(E + V log V) amortized
-- Pairing heap: O(E + V log V) amortized
-- Radix heap: O(E + V log C) amortized, where C is the key range (for integer keys)
+- Binary heap: O((V + E) log V).
+- Fibonacci heap: O(E + V log V) amortized.
+- Pairing heap: O(E + V log V) amortized.
+- Radix heap: O(E + V log C) amortized, where C is the key range (for integer keys).
 
 **Performance characteristics:**
 
-- Fibonacci and Pairing heaps provide significant speedups on dense graphs
-- Pairing heap often outperforms Fibonacci heap in practice due to lower constant factors
-- The unsafe Fibonacci variant is fastest but requires careful memory management
-- Radix heap is particularly effective when edge weights are bounded integers (as in this implementation, where weights are `u32` in range 1..=100)
+- Fibonacci and Pairing heaps provide significant speedups on dense graphs.
+- Pairing heap often outperforms Fibonacci heap in practice due to lower constant factors.
+- The unsafe Fibonacci variant is fastest but requires careful memory management.
+- Radix heap is particularly effective when edge weights are bounded integers (as in this implementation, where weights are `u32` in range 1..=100).
 
 For very large graphs (10,000+ nodes), the advanced heap implementations are recommended for best performance.
 
@@ -266,22 +266,22 @@ breakdowns.
 
 ## Module Layout
 
-- `src/dijkstra/`: Core Dijkstra implementation and heap-specific wrappers
-  - `mod.rs`: Generic `dijkstra<Q: PriorityQueue>` function (works with any heap)
-  - `heap_trait.rs`: `PriorityQueue` trait for abstracting over heap implementations
-  - `binary.rs`: Binary heap wrapper (`dijkstra_binary`)
-  - `fib.rs`: Fibonacci heap wrapper (`dijkstra_fibonacci`)
-  - `fib_unsafe.rs`: Unsafe Fibonacci heap wrapper (`dijkstra_fibonacci_unsafe`)
-  - `pairing.rs`: Pairing heap wrapper (`dijkstra_pairing`)
-  - `radix.rs`: Radix heap wrapper (`dijkstra_radix`)
-  - Also contains graph parsing, validation, and tests
-- `src/fibonacci/`: Fibonacci heap implementations
-  - `heap.rs`: `Rc<RefCell>`-based heap (`Node`, `FibonacciHeap`)
-  - `heap_unsafe.rs`: unsafe heap (`UnsafeNode`, `UnsafeFibonacciHeap`)
-- `src/pairing/`: Pairing heap implementation
-  - `heap.rs`: pairing heap (`Node`, `PairingHeap`)
-- `src/radix/`: Radix heap implementation
-  - `heap.rs`: radix heap (`RadixHeap`, `RadixHandle`)
+- `src/dijkstra/`: Core Dijkstra implementation and heap-specific wrappers.
+  - `mod.rs`: Generic `dijkstra<Q: PriorityQueue>` function (works with any heap).
+  - `heap_trait.rs`: `PriorityQueue` trait for abstracting over heap implementations.
+  - `binary.rs`: Binary heap wrapper (`dijkstra_binary`).
+  - `fib.rs`: Fibonacci heap wrapper (`dijkstra_fibonacci`).
+  - `fib_unsafe.rs`: Unsafe Fibonacci heap wrapper (`dijkstra_fibonacci_unsafe`).
+  - `pairing.rs`: Pairing heap wrapper (`dijkstra_pairing`).
+  - `radix.rs`: Radix heap wrapper (`dijkstra_radix`).
+  - Also contains graph parsing, validation, and tests.
+- `src/fibonacci/`: Fibonacci heap implementations.
+  - `heap.rs`: `Rc<RefCell>`-based heap (`Node`, `FibonacciHeap`).
+  - `heap_unsafe.rs`: unsafe heap (`UnsafeNode`, `UnsafeFibonacciHeap`).
+- `src/pairing/`: Pairing heap implementation.
+  - `heap.rs`: pairing heap (`Node`, `PairingHeap`).
+- `src/radix/`: Radix heap implementation.
+  - `heap.rs`: radix heap (`RadixHeap`, `RadixHandle`).
 
 **Architecture:**
 
