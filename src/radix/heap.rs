@@ -18,7 +18,7 @@
 ///
 /// In practice, radix heaps often outperform Fibonacci heaps for Dijkstra's algorithm,
 /// especially when edge weights are bounded integers.
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 /// Node in the radix heap.
 #[derive(Clone, Debug)]
@@ -40,8 +40,8 @@ pub struct RadixHandle {
 /// the minimum, we redistribute nodes from the first non-empty bucket into lower buckets.
 pub struct RadixHeap {
     /// Buckets: bucket[i] contains nodes where the key difference needs i bits.
-    /// We use VecDeque for efficient insertion and removal.
-    buckets: Vec<VecDeque<Node>>,
+    /// We use Vec with swap_remove for O(1) removal from any position.
+    buckets: Vec<Vec<Node>>,
     /// Current minimum key (the last extracted key, or 0 initially).
     min_key: u32,
     /// Total number of elements in the heap.
@@ -57,7 +57,7 @@ impl RadixHeap {
         // to represent any key difference
         let max_buckets = 33;
         RadixHeap {
-            buckets: vec![VecDeque::new(); max_buckets],
+            buckets: vec![Vec::new(); max_buckets],
             min_key: 0,
             size: 0,
             node_positions: HashMap::new(),
@@ -87,7 +87,7 @@ impl RadixHeap {
     pub fn insert(&mut self, key: u32, node_id: usize) -> RadixHandle {
         let bucket_idx = self.bucket_index(key);
         let pos = self.buckets[bucket_idx].len();
-        self.buckets[bucket_idx].push_back(Node { key, node_id });
+        self.buckets[bucket_idx].push(Node { key, node_id });
         self.node_positions.insert(node_id, (bucket_idx, pos));
         self.size += 1;
         RadixHandle { node_id }
@@ -113,20 +113,6 @@ impl RadixHeap {
 
         let bucket_idx = first_bucket?;
 
-        // If bucket 0 is non-empty, we can extract directly
-        if bucket_idx == 0 {
-            let node = self.buckets[0].pop_front().unwrap();
-            self.min_key = node.key;
-            self.node_positions.remove(&node.node_id);
-            self.size -= 1;
-            // Update positions of remaining nodes in bucket 0
-            for (pos, remaining_node) in self.buckets[0].iter().enumerate() {
-                self.node_positions.insert(remaining_node.node_id, (0, pos));
-            }
-            return Some((node.key, node.node_id));
-        }
-
-        // Otherwise, we need to redistribute nodes from this bucket
         // Find the minimum in this bucket
         let mut min_key = u32::MAX;
         let mut min_pos = 0;
@@ -138,22 +124,33 @@ impl RadixHeap {
             }
         }
 
-        // Remove the minimum node from the bucket
-        let extracted_node = self.buckets[bucket_idx].remove(min_pos).unwrap();
+        // Remove the minimum node from the bucket using swap_remove for O(1) removal
+        let extracted_node = self.buckets[bucket_idx].swap_remove(min_pos);
         self.node_positions.remove(&extracted_node.node_id);
+
+        // Update the swapped node's position if a swap occurred
+        // After swap_remove, if min_pos != len-1, the element at len-1 moved to min_pos
+        let bucket_len = self.buckets[bucket_idx].len();
+        if min_pos < bucket_len {
+            // A swap occurred (min_pos was not the last element)
+            let swapped_node = &self.buckets[bucket_idx][min_pos];
+            self.node_positions
+                .insert(swapped_node.node_id, (bucket_idx, min_pos));
+        }
+
         self.size -= 1;
 
         // Update min_key
         self.min_key = min_key;
 
-        // Redistribute all remaining nodes from this bucket into lower buckets
-        let nodes_to_redistribute: Vec<Node> = self.buckets[bucket_idx].drain(..).collect();
+        // Redistribute all remaining nodes from this bucket into lower buckets.
+        let nodes_to_redistribute = std::mem::take(&mut self.buckets[bucket_idx]);
         for node in nodes_to_redistribute {
+            let node_id = node.node_id;
             let new_bucket_idx = self.bucket_index(node.key);
             let pos = self.buckets[new_bucket_idx].len();
-            self.buckets[new_bucket_idx].push_back(node.clone());
-            self.node_positions
-                .insert(node.node_id, (new_bucket_idx, pos));
+            self.buckets[new_bucket_idx].push(node);
+            self.node_positions.insert(node_id, (new_bucket_idx, pos));
         }
 
         Some((min_key, extracted_node.node_id))
@@ -172,16 +169,23 @@ impl RadixHeap {
             None => return, // Node not in heap
         };
 
-        // Get the node
-        let mut node = self.buckets[old_bucket_idx]
-            .remove(old_pos)
-            .expect("Node should exist at tracked position");
-
         // Validate that new_key is actually smaller
-        if new_key >= node.key {
-            // Not actually decreasing, put it back
-            self.buckets[old_bucket_idx].insert(old_pos, node);
-            return;
+        let current_key = self.buckets[old_bucket_idx][old_pos].key;
+        if new_key >= current_key {
+            return; // Not actually decreasing
+        }
+
+        // Remove the node using swap_remove for O(1) removal
+        let mut node = self.buckets[old_bucket_idx].swap_remove(old_pos);
+
+        // Update position of the swapped node if a swap occurred
+        // After swap_remove, if old_pos != len-1, the element at len-1 moved to old_pos
+        let bucket_len = self.buckets[old_bucket_idx].len();
+        if old_pos < bucket_len {
+            // A swap occurred (old_pos was not the last element)
+            let swapped_node = &self.buckets[old_bucket_idx][old_pos];
+            self.node_positions
+                .insert(swapped_node.node_id, (old_bucket_idx, old_pos));
         }
 
         // Update the node's key
@@ -190,15 +194,9 @@ impl RadixHeap {
         // Calculate new bucket index
         let new_bucket_idx = self.bucket_index(new_key);
 
-        // Update positions of remaining nodes in the old bucket
-        for (pos, remaining_node) in self.buckets[old_bucket_idx].iter().enumerate() {
-            self.node_positions
-                .insert(remaining_node.node_id, (old_bucket_idx, pos));
-        }
-
         // Insert into new bucket
         let new_pos = self.buckets[new_bucket_idx].len();
-        self.buckets[new_bucket_idx].push_back(node);
+        self.buckets[new_bucket_idx].push(node);
         self.node_positions
             .insert(node_id, (new_bucket_idx, new_pos));
     }
@@ -267,5 +265,42 @@ mod tests {
         assert_eq!(heap.extract_min(), Some((1, 2)));
         assert_eq!(heap.extract_min(), Some((500, 3)));
         assert_eq!(heap.extract_min(), Some((1000, 1)));
+    }
+
+    #[test]
+    fn test_radix_heap_dijkstra_like_sequence() {
+        // Test that mimics Dijkstra's algorithm usage pattern
+        // Multiple extract_min and decrease_key operations
+        let mut heap = RadixHeap::new();
+        // Insert nodes like in Dijkstra's
+        let handles = [
+            heap.insert(0, 0),
+            heap.insert(u32::MAX, 1),
+            heap.insert(u32::MAX, 2),
+            heap.insert(u32::MAX, 3),
+            heap.insert(u32::MAX, 4),
+        ];
+
+        // Extract start node
+        assert_eq!(heap.extract_min(), Some((0, 0)));
+
+        // Simulate discovering neighbors and decreasing keys
+        // This pattern can trigger the bug if positions become stale
+        heap.decrease_key(&handles[1], 10);
+        heap.decrease_key(&handles[2], 20);
+        heap.decrease_key(&handles[3], 30);
+        heap.decrease_key(&handles[4], 40);
+
+        // Extract minimum (should be node 1 with key 10)
+        assert_eq!(heap.extract_min(), Some((10, 1)));
+
+        // Now decrease keys of remaining nodes
+        heap.decrease_key(&handles[2], 15); // Decrease node 2 from 20 to 15
+        heap.decrease_key(&handles[3], 25); // Decrease node 3 from 30 to 25
+
+        // Extract and verify
+        assert_eq!(heap.extract_min(), Some((15, 2)));
+        assert_eq!(heap.extract_min(), Some((25, 3)));
+        assert_eq!(heap.extract_min(), Some((40, 4)));
     }
 }
