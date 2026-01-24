@@ -250,8 +250,8 @@ intended as an order-of-magnitude guide rather than exact guarantees:
 
 | **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** | **Radix heap (`radix`)** |
 |-----------------------|-----------|-------------|----------------------------|----------------------|------------------------------------|------------------------------|--------------------------|
-| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               | ~10-15× faster           |
-| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               | ~15-20× faster           |
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               | ~50-60× faster           |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               | ~50× faster              |
 
 Exact timings may vary by machine and compiler version; for precise numbers,
 run the benchmarks locally:
