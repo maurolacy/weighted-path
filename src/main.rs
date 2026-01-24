@@ -7,7 +7,7 @@ use std::process;
 
 use weighted_path::dijkstra::{
     find_shortest_path, find_shortest_path_fibonacci, find_shortest_path_fibonacci_unsafe,
-    find_shortest_path_pairing,
+    find_shortest_path_pairing, find_shortest_path_radix,
 };
 
 fn main() {
@@ -21,7 +21,7 @@ fn run() -> Result<(), String> {
     // Simple, manual argument parsing:
     //
     // Usage:
-    //   weighted_path [--heap <binary|fib|fib-unsafe|pairing>] <input_file>
+    //   weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix>] <input_file>
     //
     // If no heap is specified, the default is `binary`.
     let mut args = args();
@@ -34,9 +34,9 @@ fn run() -> Result<(), String> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "-h" | "--heap" => {
-                heap_impl = args
-                    .next()
-                    .ok_or("Expected heap type after --heap (binary|fib|fib-unsafe|pairing)")?;
+                heap_impl = args.next().ok_or(
+                    "Expected heap type after --heap (binary|fib|fib-unsafe|pairing|radix)",
+                )?;
             }
             // Treat first non-flag as file path
             _ if file_path.is_none() => {
@@ -48,8 +48,9 @@ fn run() -> Result<(), String> {
         }
     }
 
-    let file_path = file_path
-        .ok_or("Usage: weighted_path [--heap <binary|fib|fib-unsafe|pairing>] <input_file>")?;
+    let file_path = file_path.ok_or(
+        "Usage: weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix>] <input_file>",
+    )?;
 
     let file = File::open(&file_path)
         .map_err(|e| format!("Failed to open file '{}': {}", file_path, e))?;
@@ -67,9 +68,10 @@ fn run() -> Result<(), String> {
         "fib" => find_shortest_path_fibonacci(line_refs),
         "fib-unsafe" => find_shortest_path_fibonacci_unsafe(line_refs),
         "pairing" | "pair" => find_shortest_path_pairing(line_refs),
+        "radix" => find_shortest_path_radix(line_refs),
         other => {
             return Err(format!(
-                "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair",
+                "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair, radix",
                 other
             ));
         }
