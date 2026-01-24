@@ -18,9 +18,7 @@
 ///
 /// In practice, radix heaps often outperform Fibonacci heaps for Dijkstra's algorithm,
 /// especially when edge weights are bounded integers.
-use std::collections::HashMap;
 
-/// Node in the radix heap.
 #[derive(Clone, Debug)]
 struct Node {
     key: u32,
@@ -46,8 +44,10 @@ pub struct RadixHeap {
     min_key: u32,
     /// Total number of elements in the heap.
     size: usize,
-    /// Map from node_id to (bucket_index, position_in_bucket) for O(1) decrease_key.
-    node_positions: HashMap<usize, (usize, usize)>,
+    /// Direct mapping from node_id to (bucket_index, position_in_bucket) for O(1) decrease_key.
+    /// Uses Vec instead of HashMap for better performance when node IDs are dense (0..V-1).
+    /// None means the node is not in the heap.
+    node_positions: Vec<Option<(usize, usize)>>,
 }
 
 impl RadixHeap {
@@ -60,7 +60,24 @@ impl RadixHeap {
             buckets: vec![Vec::new(); max_buckets],
             min_key: 0,
             size: 0,
-            node_positions: HashMap::new(),
+            node_positions: Vec::new(),
+        }
+    }
+
+    /// Create a new empty radix heap with pre-allocated capacity for node positions.
+    ///
+    /// `max_node_id` should be the maximum node ID that will be inserted (typically V-1
+    /// for a graph with V nodes, where node IDs are 0..V-1). This pre-allocates the
+    /// `node_positions` Vec to avoid resizes during execution.
+    pub fn with_capacity(max_node_id: usize) -> Self {
+        // u32 has 32 bits, so we need at most 33 buckets (0..=32)
+        // to represent any key difference
+        let max_buckets = 33;
+        RadixHeap {
+            buckets: vec![Vec::new(); max_buckets],
+            min_key: 0,
+            size: 0,
+            node_positions: vec![None; max_node_id + 1],
         }
     }
 
@@ -88,7 +105,12 @@ impl RadixHeap {
         let bucket_idx = self.bucket_index(key);
         let pos = self.buckets[bucket_idx].len();
         self.buckets[bucket_idx].push(Node { key, node_id });
-        self.node_positions.insert(node_id, (bucket_idx, pos));
+
+        // Resize if needed, then access directly (no bounds check)
+        if node_id >= self.node_positions.len() {
+            self.node_positions.resize(node_id + 1, None);
+        }
+        self.node_positions[node_id] = Some((bucket_idx, pos));
         self.size += 1;
         RadixHandle { node_id }
     }
@@ -126,7 +148,8 @@ impl RadixHeap {
 
         // Remove the minimum node from the bucket using swap_remove for O(1) removal
         let extracted_node = self.buckets[bucket_idx].swap_remove(min_pos);
-        self.node_positions.remove(&extracted_node.node_id);
+        // Direct access - node_id is guaranteed to be in range (it was inserted)
+        self.node_positions[extracted_node.node_id] = None;
 
         // Update the swapped node's position if a swap occurred
         // After swap_remove, if min_pos != len-1, the element at len-1 moved to min_pos
@@ -134,8 +157,8 @@ impl RadixHeap {
         if min_pos < bucket_len {
             // A swap occurred (min_pos was not the last element)
             let swapped_node = &self.buckets[bucket_idx][min_pos];
-            self.node_positions
-                .insert(swapped_node.node_id, (bucket_idx, min_pos));
+            // Direct access - node_id is guaranteed to be in range (it was inserted)
+            self.node_positions[swapped_node.node_id] = Some((bucket_idx, min_pos));
         }
 
         self.size -= 1;
@@ -150,7 +173,12 @@ impl RadixHeap {
             let new_bucket_idx = self.bucket_index(node.key);
             let pos = self.buckets[new_bucket_idx].len();
             self.buckets[new_bucket_idx].push(node);
-            self.node_positions.insert(node_id, (new_bucket_idx, pos));
+
+            // Resize if needed, then access directly (no bounds check)
+            if node_id >= self.node_positions.len() {
+                self.node_positions.resize(node_id + 1, None);
+            }
+            self.node_positions[node_id] = Some((new_bucket_idx, pos));
         }
 
         Some((min_key, extracted_node.node_id))
@@ -164,8 +192,12 @@ impl RadixHeap {
         let node_id = handle.node_id;
 
         // Find the node's current position
-        let (old_bucket_idx, old_pos) = match self.node_positions.get(&node_id) {
-            Some(pos) => *pos,
+        // Resize if needed, then access directly (no bounds check)
+        if node_id >= self.node_positions.len() {
+            self.node_positions.resize(node_id + 1, None);
+        }
+        let (old_bucket_idx, old_pos) = match self.node_positions[node_id] {
+            Some(pos) => pos,
             None => return, // Node not in heap
         };
 
@@ -184,8 +216,8 @@ impl RadixHeap {
         if old_pos < bucket_len {
             // A swap occurred (old_pos was not the last element)
             let swapped_node = &self.buckets[old_bucket_idx][old_pos];
-            self.node_positions
-                .insert(swapped_node.node_id, (old_bucket_idx, old_pos));
+            // Direct access - node_id is guaranteed to be in range (it was inserted)
+            self.node_positions[swapped_node.node_id] = Some((old_bucket_idx, old_pos));
         }
 
         // Update the node's key
@@ -197,8 +229,12 @@ impl RadixHeap {
         // Insert into new bucket
         let new_pos = self.buckets[new_bucket_idx].len();
         self.buckets[new_bucket_idx].push(node);
-        self.node_positions
-            .insert(node_id, (new_bucket_idx, new_pos));
+
+        // Resize if needed, then access directly (no bounds check)
+        if node_id >= self.node_positions.len() {
+            self.node_positions.resize(node_id + 1, None);
+        }
+        self.node_positions[node_id] = Some((new_bucket_idx, new_pos));
     }
 
     /// Check if the heap is empty.
