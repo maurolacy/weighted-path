@@ -160,6 +160,7 @@ pub fn parse_graph<'a>(
 /// - `dijkstra_fibonacci` - Safe Fibonacci heap
 /// - `dijkstra_fibonacci_unsafe` - Unsafe Fibonacci heap
 /// - `dijkstra_pairing` - Pairing heap
+/// - `dijkstra_radix` - Radix heap
 pub fn dijkstra<Q: PriorityQueue>(
     start: usize,
     end: usize,

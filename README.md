@@ -37,13 +37,14 @@ dominate the total runtime**.
 Usage:
 
 ```bash
-weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair>] <input_file>
+weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair|radix>] <input_file>
 ```
 
 - `binary` / `bin`: Standard binary-heap Dijkstra (default)
 - `fib`: Fibonacci heap (`dijkstra_fibonacci`, `Rc<RefCell>`-based)
 - `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers)
 - `pairing` / `pair`: Pairing heap (`dijkstra_pairing`)
+- `radix`: Radix heap (`dijkstra_radix`)
 
 Examples:
 
@@ -62,6 +63,9 @@ weighted_path --heap fib-unsafe graph.txt
 
 # Pairing heap
 weighted_path --heap pairing graph.txt
+
+# Radix heap
+weighted_path --heap radix graph.txt
 ```
 
 ## Input Format
@@ -221,17 +225,21 @@ The current implementation uses:
   - `dijkstra_fibonacci`: `Rc<RefCell>`-based heap (memory-safe but slower)
   - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`)
 - **Pairing heap** (`dijkstra_pairing`): Simpler than Fibonacci, often faster in practice
+- **Radix heap** (`dijkstra_radix`): Specialized for non-decreasing integer keys, excellent for Dijkstra's algorithm
 
 **Complexity:**
 
 - Binary heap: O((V + E) log V)
-- Fibonacci/Pairing heaps: O(E + V log V) amortized
+- Fibonacci heap: O(E + V log V) amortized
+- Pairing heap: O(E + V log V) amortized
+- Radix heap: O(E + V log C) amortized, where C is the key range (for integer keys)
 
 **Performance characteristics:**
 
 - Fibonacci and Pairing heaps provide significant speedups on dense graphs
 - Pairing heap often outperforms Fibonacci heap in practice due to lower constant factors
 - The unsafe Fibonacci variant is fastest but requires careful memory management
+- Radix heap is particularly effective when edge weights are bounded integers (as in this implementation, where weights are `u32` in range 1..=100)
 
 For very large graphs (10,000+ nodes), the advanced heap implementations are recommended for best performance.
 
@@ -240,16 +248,16 @@ For very large graphs (10,000+ nodes), the advanced heap implementations are rec
 These numbers come from the Criterion benchmark suite in this repository and are
 intended as an order-of-magnitude guide rather than exact guarantees:
 
-| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** |
-|-----------------------|-----------|-------------|----------------------------|----------------------|------------------------------------|------------------------------|
-| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               |
-| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               |
+| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** | **Radix heap (`radix`)** |
+|-----------------------|-----------|-------------|----------------------------|----------------------|------------------------------------|------------------------------|--------------------------|
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               | ~10-15× faster           |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               | ~15-20× faster           |
 
 Exact timings may vary by machine and compiler version; for precise numbers,
 run the benchmarks locally:
 
 ```bash
-cargo bench --bench dijkstra_bench -- reference heap_comparison
+cargo bench --bench dijkstra_bench -- reference
 ```
 
 Criterion will generate detailed HTML reports (including plots) under
@@ -265,12 +273,15 @@ breakdowns.
   - `fib.rs`: Fibonacci heap wrapper (`dijkstra_fibonacci`)
   - `fib_unsafe.rs`: Unsafe Fibonacci heap wrapper (`dijkstra_fibonacci_unsafe`)
   - `pairing.rs`: Pairing heap wrapper (`dijkstra_pairing`)
+  - `radix.rs`: Radix heap wrapper (`dijkstra_radix`)
   - Also contains graph parsing, validation, and tests
 - `src/fibonacci/`: Fibonacci heap implementations
   - `heap.rs`: `Rc<RefCell>`-based heap (`Node`, `FibonacciHeap`)
   - `heap_unsafe.rs`: unsafe heap (`UnsafeNode`, `UnsafeFibonacciHeap`)
 - `src/pairing/`: Pairing heap implementation
   - `heap.rs`: pairing heap (`Node`, `PairingHeap`)
+- `src/radix/`: Radix heap implementation
+  - `heap.rs`: radix heap (`RadixHeap`, `RadixHandle`)
 
 **Architecture:**
 
