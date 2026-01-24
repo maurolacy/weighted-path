@@ -3,6 +3,7 @@ pub mod fib;
 pub mod fib_unsafe;
 mod heap_trait;
 pub mod pairing;
+pub mod radix;
 
 use std::collections::HashMap;
 
@@ -12,6 +13,7 @@ pub use binary::dijkstra_binary;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 pub use pairing::dijkstra_pairing;
+pub use radix::dijkstra_radix;
 
 /// Function type for Dijkstra implementations over an adjacency list.
 ///
@@ -309,6 +311,11 @@ pub fn find_shortest_path_fibonacci_unsafe(lines: Vec<&str>) -> Result<String, S
 /// Find the shortest path using the Pairing-heap Dijkstra implementation.
 pub fn find_shortest_path_pairing(lines: Vec<&str>) -> Result<String, String> {
     find_shortest_path_with(lines, true, dijkstra_pairing)
+}
+
+/// Find the shortest path using the Radix-heap Dijkstra implementation.
+pub fn find_shortest_path_radix(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_with(lines, true, dijkstra_radix)
 }
 
 #[allow(clippy::doc_overindented_list_items)]
