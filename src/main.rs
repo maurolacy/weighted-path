@@ -6,10 +6,10 @@ use std::io::{self, BufRead, BufReader};
 use std::process;
 
 use weighted_path::dijkstra::{
-    dijkstra_binary, dijkstra_fibonacci, dijkstra_fibonacci_unsafe, dijkstra_pairing,
-    dijkstra_radix, find_shortest_path, find_shortest_path_fibonacci,
-    find_shortest_path_fibonacci_unsafe, find_shortest_path_pairing, find_shortest_path_radix,
-    parse_graph,
+    dijkstra_binary, dijkstra_dial, dijkstra_fibonacci, dijkstra_fibonacci_unsafe,
+    dijkstra_pairing, dijkstra_radix, find_shortest_path, find_shortest_path_dial,
+    find_shortest_path_fibonacci, find_shortest_path_fibonacci_unsafe, find_shortest_path_pairing,
+    find_shortest_path_radix, parse_graph,
 };
 
 fn main() {
@@ -23,7 +23,7 @@ fn run() -> Result<(), String> {
     // Simple, manual argument parsing:
     //
     // Usage:
-    //   weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix>] [--profile] <input_file>
+    //   weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix|dial>] [--profile] <input_file>
     //
     // If no heap is specified, the default is `binary`.
     // If --profile is specified, runs Dijkstra multiple times for profiling.
@@ -39,7 +39,7 @@ fn run() -> Result<(), String> {
         match arg.as_str() {
             "-h" | "--heap" => {
                 heap_impl = args.next().ok_or(
-                    "Expected heap type after --heap (binary|fib|fib-unsafe|pairing|radix)",
+                    "Expected heap type after --heap (binary|fib|fib-unsafe|pairing|radix|dial)",
                 )?;
             }
             "-p" | "--profile" => {
@@ -56,7 +56,7 @@ fn run() -> Result<(), String> {
     }
 
     let file_path = file_path.ok_or(
-        "Usage: weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix>] [--profile] <input_file>",
+        "Usage: weighted_path [--heap <binary|fib|fib-unsafe|pairing|radix|dial>] [--profile] <input_file>",
     )?;
 
     let file = File::open(&file_path)
@@ -111,9 +111,14 @@ fn run() -> Result<(), String> {
                     let _path = dijkstra_radix(0, num_nodes - 1, &parsed.graph);
                 }
             }
+            "dial" => {
+                for _ in 0..100 {
+                    let _path = dijkstra_dial(0, num_nodes - 1, &parsed.graph);
+                }
+            }
             other => {
                 return Err(format!(
-                    "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair, radix",
+                    "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair, radix, dial",
                     other
                 ));
             }
@@ -128,9 +133,10 @@ fn run() -> Result<(), String> {
             "fib-unsafe" => find_shortest_path_fibonacci_unsafe(line_refs),
             "pairing" | "pair" => find_shortest_path_pairing(line_refs),
             "radix" => find_shortest_path_radix(line_refs),
+            "dial" => find_shortest_path_dial(line_refs),
             other => {
                 return Err(format!(
-                    "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair, radix",
+                    "Unknown heap implementation '{}'. Expected one of: binary|bin, fib, fib-unsafe, pairing|pair, radix, dial",
                     other
                 ));
             }
