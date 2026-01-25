@@ -1,4 +1,5 @@
 pub mod binary;
+pub mod dial;
 pub mod fib;
 pub mod fib_unsafe;
 mod heap_trait;
@@ -10,6 +11,7 @@ use std::collections::HashMap;
 use heap_trait::PriorityQueue;
 
 pub use binary::dijkstra_binary;
+pub use dial::dijkstra_dial;
 pub use fib::dijkstra_fibonacci;
 pub use fib_unsafe::dijkstra_fibonacci_unsafe;
 pub use pairing::dijkstra_pairing;
@@ -317,6 +319,11 @@ pub fn find_shortest_path_pairing(lines: Vec<&str>) -> Result<String, String> {
 /// Find the shortest path using the Radix-heap Dijkstra implementation.
 pub fn find_shortest_path_radix(lines: Vec<&str>) -> Result<String, String> {
     find_shortest_path_with(lines, true, dijkstra_radix)
+}
+
+/// Find the shortest path using Dial's algorithm (bucket-based Dijkstra).
+pub fn find_shortest_path_dial(lines: Vec<&str>) -> Result<String, String> {
+    find_shortest_path_with(lines, true, dijkstra_dial)
 }
 
 #[allow(clippy::doc_overindented_list_items)]
