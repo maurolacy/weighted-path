@@ -125,26 +125,22 @@ impl RadixHeap {
         }
 
         // Find the first non-empty bucket
-        let mut first_bucket = None;
-        for (i, bucket) in self.buckets.iter().enumerate() {
-            if !bucket.is_empty() {
-                first_bucket = Some(i);
-                break;
-            }
-        }
+        let first_bucket = self
+            .buckets
+            .iter()
+            .enumerate()
+            .find(|(_, bucket)| !bucket.is_empty())
+            .map(|(i, _)| i);
 
         let bucket_idx = first_bucket?;
 
         // Find the minimum in this bucket
-        let mut min_key = u32::MAX;
-        let mut min_pos = 0;
-
-        for (pos, node) in self.buckets[bucket_idx].iter().enumerate() {
-            if node.key < min_key {
-                min_key = node.key;
-                min_pos = pos;
-            }
-        }
+        let (min_pos, min_key) = self.buckets[bucket_idx]
+            .iter()
+            .enumerate()
+            .min_by(|x, y| x.1.key.cmp(&y.1.key))
+            .map(|(pos, node)| (pos, node.key))
+            .unwrap_or((0, u32::MAX));
 
         // Remove the minimum node from the bucket using swap_remove for O(1) removal
         let extracted_node = self.buckets[bucket_idx].swap_remove(min_pos);
