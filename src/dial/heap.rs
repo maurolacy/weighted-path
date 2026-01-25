@@ -12,9 +12,7 @@
 /// This is optimal when C (maximum distance) is small compared to V log V.
 /// For graphs with bounded integer edge weights (like 1..=100), this can be
 /// faster than priority queue-based algorithms.
-use std::collections::VecDeque;
 
-/// Handle for Dial's algorithm.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DialHandle {
     node_id: usize,
@@ -26,15 +24,17 @@ pub struct DialHandle {
 /// with distance i. We process buckets in order (0, 1, 2, ...).
 pub struct DialHeap {
     /// Buckets indexed by distance: buckets[i] contains nodes with distance i.
-    buckets: Vec<VecDeque<usize>>,
+    /// Uses Vec with swap_remove for O(1) removal.
+    buckets: Vec<Vec<usize>>,
     /// Current bucket being processed.
     current_bucket: usize,
     /// Maximum distance seen so far (for dynamic bucket allocation).
     max_distance: usize,
     /// Distances from source to each node.
     distances: Vec<u32>,
-    /// Map from node_id to bucket index (for efficient decrease_key).
-    node_buckets: Vec<Option<usize>>,
+    /// Map from node_id to (bucket_index, position_in_bucket) for O(1) decrease_key.
+    /// None means the node is not in the heap.
+    node_positions: Vec<Option<(usize, usize)>>,
     /// Number of nodes currently in buckets.
     size: usize,
 }
@@ -46,11 +46,11 @@ impl DialHeap {
     /// `initial_max_distance` is an estimate of maximum distance (for pre-allocation).
     pub fn new(max_nodes: usize, initial_max_distance: usize) -> Self {
         DialHeap {
-            buckets: vec![VecDeque::new(); initial_max_distance + 1],
+            buckets: vec![Vec::new(); initial_max_distance + 1],
             current_bucket: 0,
             max_distance: 0,
             distances: vec![u32::MAX; max_nodes],
-            node_buckets: vec![None; max_nodes],
+            node_positions: vec![None; max_nodes],
             size: 0,
         }
     }
@@ -63,7 +63,7 @@ impl DialHeap {
         // Ensure vectors are large enough
         if node_id >= self.distances.len() {
             self.distances.resize(node_id + 1, u32::MAX);
-            self.node_buckets.resize(node_id + 1, None);
+            self.node_positions.resize(node_id + 1, None);
         }
 
         // Don't insert nodes with u32::MAX - they'll be inserted via decrease_key
@@ -75,15 +75,16 @@ impl DialHeap {
         // Only insert if this is a better distance
         if distance < self.distances[node_id] {
             // Remove from old bucket if it exists
-            if let Some(old_bucket) = self.node_buckets[node_id] {
-                self.remove_from_bucket(old_bucket, node_id);
+            if let Some((old_bucket, old_pos)) = self.node_positions[node_id] {
+                self.remove_from_bucket(old_bucket, old_pos);
             }
 
             // Add to new bucket
             let dist = distance as usize;
             self.ensure_bucket_capacity(dist);
-            self.buckets[dist].push_back(node_id);
-            self.node_buckets[node_id] = Some(dist);
+            let pos = self.buckets[dist].len();
+            self.buckets[dist].push(node_id);
+            self.node_positions[node_id] = Some((dist, pos));
             self.distances[node_id] = distance;
             self.size += 1;
             self.max_distance = self.max_distance.max(dist);
@@ -102,22 +103,38 @@ impl DialHeap {
             }
 
             // Process current bucket
-            while let Some(node_id) = self.buckets[self.current_bucket].pop_front() {
+            let bucket = &mut self.buckets[self.current_bucket];
+            if bucket.is_empty() {
+                self.current_bucket += 1;
+                continue;
+            }
+
+            // Find the first valid node in this bucket
+            for i in 0..bucket.len() {
+                let node_id = bucket[i];
                 // Verify this node still has the correct distance for this bucket
                 // (it might have been moved to a different bucket via decrease_key)
                 if self.distances[node_id] == self.current_bucket as u32
-                    && self.node_buckets[node_id] == Some(self.current_bucket)
+                    && self.node_positions[node_id] == Some((self.current_bucket, i))
                 {
-                    // This node is valid - extract it
-                    self.node_buckets[node_id] = None;
+                    // This node is valid - extract it using swap_remove for O(1)
+                    bucket.swap_remove(i);
+                    // Update position of swapped node if a swap occurred
+                    if i < bucket.len() {
+                        let swapped_node_id = bucket[i];
+                        if let Some(pos) = self.node_positions[swapped_node_id]
+                            && pos.0 == self.current_bucket
+                        {
+                            self.node_positions[swapped_node_id] = Some((self.current_bucket, i));
+                        }
+                    }
+                    self.node_positions[node_id] = None;
                     self.size -= 1;
                     return Some((self.distances[node_id], node_id));
                 }
-                // Otherwise, this node was moved to a different bucket via decrease_key
-                // Skip it and continue with next node in this bucket
             }
 
-            // Bucket is empty, move to next
+            // No valid node found in this bucket, move to next
             self.current_bucket += 1;
         }
     }
@@ -131,7 +148,7 @@ impl DialHeap {
         // Ensure vectors are large enough
         if node_id >= self.distances.len() {
             self.distances.resize(node_id + 1, u32::MAX);
-            self.node_buckets.resize(node_id + 1, None);
+            self.node_positions.resize(node_id + 1, None);
         }
 
         // Check if this is actually a decrease
@@ -145,27 +162,36 @@ impl DialHeap {
         }
 
         // Remove from old bucket if it exists
-        if let Some(old_bucket) = self.node_buckets[node_id] {
-            self.remove_from_bucket(old_bucket, node_id);
+        if let Some((old_bucket, old_pos)) = self.node_positions[node_id] {
+            self.remove_from_bucket(old_bucket, old_pos);
         }
 
         // Add to new bucket
         let new_bucket = new_distance as usize;
         self.ensure_bucket_capacity(new_bucket);
-        self.buckets[new_bucket].push_back(node_id);
-        self.node_buckets[node_id] = Some(new_bucket);
+        let new_pos = self.buckets[new_bucket].len();
+        self.buckets[new_bucket].push(node_id);
+        self.node_positions[node_id] = Some((new_bucket, new_pos));
         self.distances[node_id] = new_distance;
         self.size += 1;
         self.max_distance = self.max_distance.max(new_bucket);
     }
 
-    /// Remove a node from a specific bucket.
-    fn remove_from_bucket(&mut self, bucket_idx: usize, node_id: usize) {
+    /// Remove a node from a specific bucket at the given position.
+    /// Uses swap_remove for O(1) removal and updates the swapped node's position.
+    fn remove_from_bucket(&mut self, bucket_idx: usize, pos: usize) {
         let bucket = &mut self.buckets[bucket_idx];
-        if let Some(pos) = bucket.iter().position(|&id| id == node_id) {
-            bucket.remove(pos);
-            self.size -= 1;
+        bucket.swap_remove(pos);
+        // Update position of swapped node if a swap occurred
+        if pos < bucket.len() {
+            let swapped_node_id = bucket[pos];
+            if let Some(swapped_pos) = self.node_positions[swapped_node_id]
+                && swapped_pos.0 == bucket_idx
+            {
+                self.node_positions[swapped_node_id] = Some((bucket_idx, pos));
+            }
         }
+        self.size -= 1;
     }
 
     /// Ensure we have enough buckets for the given distance.
@@ -174,7 +200,7 @@ impl DialHeap {
             // Limit bucket size to prevent excessive memory usage
             const MAX_BUCKETS: usize = 10_000_000;
             let new_size = (dist + 1).min(MAX_BUCKETS);
-            self.buckets.resize(new_size, VecDeque::new());
+            self.buckets.resize(new_size, Vec::new());
         }
     }
 
