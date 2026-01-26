@@ -102,29 +102,14 @@ impl DialHeap {
                 return None;
             }
 
-            // Process current bucket
-            let bucket = &mut self.buckets[self.current_bucket];
-            if bucket.is_empty() {
-                self.current_bucket += 1;
-                continue;
+            // Extract the last node from this bucket (O(1) with pop, no swap needed)
+            if let Some(node_id) = self.buckets[self.current_bucket].pop() {
+                self.node_positions[node_id] = None;
+                self.size -= 1;
+                return Some((self.distances[node_id], node_id));
             }
 
-            // Find the first valid node in this bucket
-            for i in 0..bucket.len() {
-                let node_id = bucket[i];
-                // Verify this node still has the correct distance for this bucket
-                // (it might have been moved to a different bucket via decrease_key)
-                if self.distances[node_id] == self.current_bucket as u32
-                    && self.node_positions[node_id] == Some((self.current_bucket, i))
-                {
-                    // This node is valid - extract it
-                    self.remove_from_bucket(self.current_bucket, i);
-                    self.node_positions[node_id] = None;
-                    return Some((self.distances[node_id], node_id));
-                }
-            }
-
-            // No valid node found in this bucket, move to next
+            // Bucket is empty, move to next
             self.current_bucket += 1;
         }
     }
