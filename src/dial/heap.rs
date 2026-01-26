@@ -39,6 +39,10 @@ pub struct DialHeap {
     size: usize,
 }
 
+/// Maximum number of buckets supported by Dial's algorithm.
+/// Distances exceeding this value will cause a panic.
+const MAX_BUCKETS: usize = 10_000_000;
+
 impl DialHeap {
     /// Create a new Dial heap with initial capacity.
     ///
@@ -160,12 +164,17 @@ impl DialHeap {
     }
 
     /// Ensure we have enough buckets for the given distance.
+    /// Panics if the distance exceeds MAX_BUCKETS.
     fn ensure_bucket_capacity(&mut self, dist: usize) {
+        if dist >= MAX_BUCKETS {
+            panic!(
+                "Distance {} exceeds maximum supported distance {} for Dial's algorithm. \
+                 Consider using a different heap implementation for graphs with large edge weights.",
+                dist, MAX_BUCKETS
+            );
+        }
         if dist >= self.buckets.len() {
-            // Limit bucket size to prevent excessive memory usage
-            const MAX_BUCKETS: usize = 10_000_000;
-            let new_size = (dist + 1).min(MAX_BUCKETS);
-            self.buckets.resize(new_size, Vec::new());
+            self.buckets.resize(dist + 1, Vec::new());
         }
     }
 
@@ -237,5 +246,24 @@ mod tests {
         assert_eq!(heap.extract_min(), Some((10, 1)));
         assert_eq!(heap.extract_min(), Some((20, 2)));
         assert_eq!(heap.extract_min(), Some((30, 3)));
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds maximum supported distance")]
+    fn test_dial_heap_max_buckets_insert() {
+        let mut heap = DialHeap::new(10, 100);
+        // Insert with distance exactly at MAX_BUCKETS should panic
+        heap.insert(MAX_BUCKETS as u32, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds maximum supported distance")]
+    fn test_dial_heap_max_buckets_decrease_key() {
+        let mut heap = DialHeap::new(10, 100);
+        // Insert with u32::MAX (doesn't go into buckets, but sets distance)
+        let handle = heap.insert(u32::MAX, 1);
+        // Decrease key with distance exceeding MAX_BUCKETS should panic
+        // This is a valid decrease (u32::MAX > MAX_BUCKETS), so it will call ensure_bucket_capacity
+        heap.decrease_key(&handle, MAX_BUCKETS as u32);
     }
 }
