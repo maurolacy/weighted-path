@@ -37,7 +37,7 @@ dominate the total runtime**.
 Usage:
 
 ```bash
-weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair|radix>] <input_file>
+weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair|radix|dial>] <input_file>
 ```
 
 - `binary` / `bin`: Standard binary-heap Dijkstra (default).
@@ -45,6 +45,7 @@ weighted_path [--heap <binary|bin|fib|fib-unsafe|pairing|pair|radix>] <input_fil
 - `fib-unsafe`: Unsafe Fibonacci heap (`dijkstra_fibonacci_unsafe`, raw pointers).
 - `pairing` / `pair`: Pairing heap (`dijkstra_pairing`).
 - `radix`: Radix heap (`dijkstra_radix`).
+- `dial`: Dial's algorithm (`dijkstra_dial`, bucket-based).
 
 Examples:
 
@@ -66,6 +67,9 @@ weighted_path --heap pairing graph.txt
 
 # Radix heap
 weighted_path --heap radix graph.txt
+
+# Dial's algorithm
+weighted_path --heap dial graph.txt
 ```
 
 ## Input Format
@@ -226,6 +230,7 @@ The current implementation uses:
   - `dijkstra_fibonacci_unsafe`: raw-pointer heap (fastest, but uses `unsafe`).
 - **Pairing heap** (`dijkstra_pairing`): Simpler than Fibonacci, often faster in practice.
 - **Radix heap** (`dijkstra_radix`): Specialized for non-decreasing integer keys, excellent for Dijkstra's algorithm.
+- **Dial's algorithm** (`dijkstra_dial`): Bucket-based algorithm optimized for small integer edge weights (1..=100). Very efficient for dense graphs.
 
 **Complexity:**
 
@@ -233,6 +238,7 @@ The current implementation uses:
 - Fibonacci heap: O(E + V log V) amortized.
 - Pairing heap: O(E + V log V) amortized.
 - Radix heap: O(E + V log C) amortized, where C is the key range (for integer keys).
+- Dial's algorithm: O(V + E + C), where C is the maximum distance. Optimal when C is small compared to V log V.
 
 **Performance characteristics:**
 
@@ -240,6 +246,7 @@ The current implementation uses:
 - Pairing heap often outperforms Fibonacci heap in practice due to lower constant factors.
 - The unsafe Fibonacci variant is fastest but requires careful memory management.
 - Radix heap is particularly effective when edge weights are bounded integers (as in this implementation, where weights are `u32` in range 1..=100).
+- Dial's algorithm excels with small integer edge weights and dense graphs. Its bucket-based approach avoids priority queue overhead, making it competitive with or faster than advanced heap structures for this use case.
 
 For very large graphs (10,000+ nodes), the advanced heap implementations are recommended for best performance.
 
@@ -248,10 +255,10 @@ For very large graphs (10,000+ nodes), the advanced heap implementations are rec
 These numbers come from the Criterion benchmark suite in this repository and are
 intended as an order-of-magnitude guide rather than exact guarantees:
 
-| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** | **Radix heap (`radix`)** |
-|-----------------------|-----------|-------------|----------------------------|----------------------|------------------------------------|------------------------------|--------------------------|
-| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               | ~50-60× faster           |
-| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               | ~50× faster              |
+| **Graph type**        | **Nodes** | **Density** | **Binary heap (baseline)** | **Fib heap (`fib`)** | **Unsafe Fib heap (`fib-unsafe`)** | **Pairing heap (`pairing`)** | **Radix heap (`radix`)** | **Dial's algorithm (`dial`)** |
+|-----------------------|-----------|-------------|----------------------------|----------------------|------------------------------------|------------------------------|--------------------------|-------------------------------|
+| Sparse graph          | 500       | 0.1         | 1×                         | ~5–10× faster        | ~20× faster                        | ~10-15× faster               | ~50-60× faster           | ~50-60× faster                |
+| Dense graph           | 1000      | 0.3         | 1×                         | >30× faster          | >100× faster                       | ~30-35× faster               | ~50× faster              | >150× faster                  |
 
 Exact timings may vary by machine and compiler version; for precise numbers,
 run the benchmarks locally:
@@ -274,6 +281,7 @@ breakdowns.
   - `fib_unsafe.rs`: Unsafe Fibonacci heap wrapper (`dijkstra_fibonacci_unsafe`).
   - `pairing.rs`: Pairing heap wrapper (`dijkstra_pairing`).
   - `radix.rs`: Radix heap wrapper (`dijkstra_radix`).
+  - `dial.rs`: Dial's algorithm wrapper (`dijkstra_dial`).
   - Also contains graph parsing, validation, and tests.
 - `src/fibonacci/`: Fibonacci heap implementations.
   - `heap.rs`: `Rc<RefCell>`-based heap (`Node`, `FibonacciHeap`).
@@ -282,6 +290,8 @@ breakdowns.
   - `heap.rs`: pairing heap (`Node`, `PairingHeap`).
 - `src/radix/`: Radix heap implementation.
   - `heap.rs`: radix heap (`RadixHeap`, `RadixHandle`).
+- `src/dial/`: Dial's algorithm implementation.
+  - `heap.rs`: bucket-based heap (`DialHeap`, `DialHandle`).
 
 **Architecture:**
 
