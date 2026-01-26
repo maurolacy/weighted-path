@@ -113,8 +113,12 @@ impl DialHeap {
     ///
     /// Moves the node to a lower bucket if the new distance is smaller.
     pub fn decrease_key(&mut self, handle: &DialHandle, new_distance: u32) {
-        let node_id = handle.node_id;
+        // Don't process u32::MAX
+        if new_distance == u32::MAX {
+            return;
+        }
 
+        let node_id = handle.node_id;
         // Ensure vectors are large enough
         if node_id >= self.distances.len() {
             self.distances.resize(node_id + 1, u32::MAX);
@@ -123,11 +127,6 @@ impl DialHeap {
 
         // Check if this is actually a decrease
         if new_distance >= self.distances[node_id] {
-            return;
-        }
-
-        // Don't process u32::MAX
-        if new_distance == u32::MAX {
             return;
         }
 
