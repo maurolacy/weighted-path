@@ -154,11 +154,7 @@ impl DialHeap {
         // Update position of swapped node if a swap occurred
         if pos < bucket.len() {
             let swapped_node_id = bucket[pos];
-            if let Some(swapped_pos) = self.node_positions[swapped_node_id]
-                && swapped_pos.0 == bucket_idx
-            {
-                self.node_positions[swapped_node_id] = Some((bucket_idx, pos));
-            }
+            self.node_positions[swapped_node_id] = Some((bucket_idx, pos));
         }
         self.size -= 1;
     }
