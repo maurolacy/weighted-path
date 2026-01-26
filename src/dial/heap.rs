@@ -117,19 +117,9 @@ impl DialHeap {
                 if self.distances[node_id] == self.current_bucket as u32
                     && self.node_positions[node_id] == Some((self.current_bucket, i))
                 {
-                    // This node is valid - extract it using swap_remove for O(1)
-                    bucket.swap_remove(i);
-                    // Update position of swapped node if a swap occurred
-                    if i < bucket.len() {
-                        let swapped_node_id = bucket[i];
-                        if let Some(pos) = self.node_positions[swapped_node_id]
-                            && pos.0 == self.current_bucket
-                        {
-                            self.node_positions[swapped_node_id] = Some((self.current_bucket, i));
-                        }
-                    }
+                    // This node is valid - extract it
+                    self.remove_from_bucket(self.current_bucket, i);
                     self.node_positions[node_id] = None;
-                    self.size -= 1;
                     return Some((self.distances[node_id], node_id));
                 }
             }
