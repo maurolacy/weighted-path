@@ -30,16 +30,17 @@ impl PriorityQueue for DialHeap {
 
 /// Dijkstra implementation using Dial's algorithm.
 ///
-/// Estimates maximum distance as V * max_edge_weight for bucket pre-allocation.
+/// Uses a smaller initial bucket allocation and lets the heap grow dynamically.
 pub fn dijkstra_dial(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
     let max_nodes = graph.len();
-    // Estimate max distance: assume worst case path through all nodes with max weight 100
-    // This is a conservative estimate; buckets will grow dynamically if needed
-    let estimated_max_distance = max_nodes * 100;
+    // Start with a smaller initial allocation (e.g., 1000 buckets)
+    // The heap will grow dynamically via ensure_bucket_capacity as needed
+    // This avoids allocating huge arrays upfront (e.g., 1M+ buckets for large graphs)
+    let initial_max_distance = 1000.min(max_nodes * 10);
     crate::dijkstra::dijkstra(
         start,
         end,
         graph,
-        DialHeap::new(max_nodes, estimated_max_distance),
+        DialHeap::new(max_nodes, initial_max_distance),
     )
 }
