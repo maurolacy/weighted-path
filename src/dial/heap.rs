@@ -97,21 +97,16 @@ impl DialHeap {
     ///
     /// Processes buckets in order (0, 1, 2, ...) and extracts from the current bucket.
     pub fn extract_min(&mut self) -> Option<(u32, usize)> {
-        loop {
-            if self.current_bucket > self.max_distance {
-                return None;
-            }
-
-            // Extract the last node from this bucket (O(1) with pop, no swap needed)
+        // Process buckets sequentially starting from current_bucket
+        while self.current_bucket <= self.max_distance {
             if let Some(node_id) = self.buckets[self.current_bucket].pop() {
                 self.node_positions[node_id] = None;
                 self.size -= 1;
                 return Some((self.distances[node_id], node_id));
             }
-
-            // Bucket is empty, move to next
             self.current_bucket += 1;
         }
+        None
     }
 
     /// Decrease the key (distance) of a node.
