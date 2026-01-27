@@ -139,7 +139,6 @@ impl RadixHeap {
 
         // Remove the minimum node from the bucket using swap_remove for O(1) removal
         let extracted_node = self.buckets[bucket_idx].swap_remove(min_pos);
-        // Direct access - node_id is guaranteed to be in range (it was inserted)
         self.node_positions[extracted_node.node_id] = None;
 
         // Update the swapped node's position if a swap occurred
@@ -148,7 +147,6 @@ impl RadixHeap {
         if min_pos < bucket_len {
             // A swap occurred (min_pos was not the last element)
             let swapped_node = &self.buckets[bucket_idx][min_pos];
-            // Direct access - node_id is guaranteed to be in range (it was inserted)
             self.node_positions[swapped_node.node_id] = Some((bucket_idx, min_pos));
         }
 
@@ -164,11 +162,6 @@ impl RadixHeap {
             let new_bucket_idx = self.bucket_index(node.key);
             let pos = self.buckets[new_bucket_idx].len();
             self.buckets[new_bucket_idx].push(node);
-
-            // Resize if needed, then access directly (no bounds check)
-            if node_id >= self.node_positions.len() {
-                self.node_positions.resize(node_id + 1, None);
-            }
             self.node_positions[node_id] = Some((new_bucket_idx, pos));
         }
 
