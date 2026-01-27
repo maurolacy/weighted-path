@@ -57,18 +57,14 @@ impl PairingHeap {
     }
 
     pub fn extract_min(&mut self) -> Option<(u32, usize)> {
-        let root = self.root.take()?;
+        let min_node = self.root.take()?;
         let result = {
-            let root_borrow = root.borrow();
-            Some((root_borrow.key, root_borrow.node_id))
+            let min_node_borrow = min_node.borrow();
+            Some((min_node_borrow.key, min_node_borrow.node_id))
         };
 
         // Extract children and merge them using the pairing operation
-        let children = {
-            let mut root_borrow = root.borrow_mut();
-            root_borrow.parent = None;
-            root_borrow.child.take()
-        };
+        let children = min_node.borrow_mut().child.take();
 
         if let Some(first_child) = children {
             self.root = Some(self.pair_children(first_child));
