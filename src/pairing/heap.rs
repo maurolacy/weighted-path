@@ -66,10 +66,9 @@ impl PairingHeap {
         // Extract children and merge them using the pairing operation
         let children = min_node.borrow_mut().child.take();
 
-        if let Some(first_child) = children {
-            self.root = Some(self.pair_children(first_child));
+        if let Some(new_root) = self.pair_children(children) {
+            self.root = Some(new_root);
         }
-
         result
     }
 
@@ -170,10 +169,10 @@ impl PairingHeap {
         }
     }
 
-    fn pair_children(&self, first_child: Rc<RefCell<Node>>) -> Rc<RefCell<Node>> {
+    fn pair_children(&self, first_child: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>> {
         // Collect all children into a vector
         let mut children = Vec::new();
-        let mut current = Some(first_child);
+        let mut current = first_child;
         while let Some(node) = current {
             let sibling = node.borrow().sibling.clone();
             {
@@ -185,12 +184,8 @@ impl PairingHeap {
             current = sibling;
         }
 
-        if children.is_empty() {
-            unreachable!("pair_children called with no children");
-        }
-
-        if children.len() == 1 {
-            return children.into_iter().next().unwrap();
+        if children.len() <= 1 {
+            return children.pop();
         }
 
         // Pair children: merge pairs from left to right
@@ -212,7 +207,7 @@ impl PairingHeap {
             result = self.merge(result, pair);
         }
 
-        result
+        Some(result)
     }
 
     pub fn is_empty(&self) -> bool {
