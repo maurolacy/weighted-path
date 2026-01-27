@@ -176,7 +176,6 @@ impl RadixHeap {
         let node_id = handle.node_id;
 
         // Find the node's current position
-        // Resize if needed, then access directly (no bounds check)
         if node_id >= self.node_positions.len() {
             self.node_positions.resize(node_id + 1, None);
         }
@@ -200,7 +199,6 @@ impl RadixHeap {
         if old_pos < bucket_len {
             // A swap occurred (old_pos was not the last element)
             let swapped_node = &self.buckets[old_bucket_idx][old_pos];
-            // Direct access - node_id is guaranteed to be in range (it was inserted)
             self.node_positions[swapped_node.node_id] = Some((old_bucket_idx, old_pos));
         }
 
@@ -214,10 +212,6 @@ impl RadixHeap {
         let new_pos = self.buckets[new_bucket_idx].len();
         self.buckets[new_bucket_idx].push(node);
 
-        // Resize if needed, then access directly (no bounds check)
-        if node_id >= self.node_positions.len() {
-            self.node_positions.resize(node_id + 1, None);
-        }
         self.node_positions[node_id] = Some((new_bucket_idx, new_pos));
     }
 
