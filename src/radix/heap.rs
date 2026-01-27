@@ -86,18 +86,13 @@ impl RadixHeap {
     /// The bucket index is the number of bits needed to represent (key - min_key),
     /// or 0 if key == min_key.
     fn bucket_index(&self, key: u32) -> usize {
-        if key == self.min_key {
-            return 0;
-        }
-        // Calculate the difference, handling potential underflow
-        let diff = key.wrapping_sub(self.min_key);
+        // By radix-heap invariant we must have key >= min_key here.
+        // If this is violated, the heap's internal state is already inconsistent.
+        debug_assert!(key >= self.min_key);
+        let diff = key - self.min_key;
         // Find the position of the most significant bit
         // This is the number of bits needed to represent the difference
-        if diff == 0 {
-            0
-        } else {
-            (32 - diff.leading_zeros()) as usize
-        }
+        (32 - diff.leading_zeros()) as usize
     }
 
     /// Insert a node with the given key and node ID.
