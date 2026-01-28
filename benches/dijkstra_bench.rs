@@ -65,7 +65,7 @@ fn benchmark_dijkstra_algorithm(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(graph.clone()))),
         );
     }
 
@@ -83,7 +83,7 @@ fn benchmark_different_densities(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("density", format!("{:.2}", density)),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(graph.clone()))),
         );
     }
 
@@ -107,7 +107,7 @@ fn benchmark_real_world_graphs(c: &mut Criterion) {
             group.bench_with_input(
                 BenchmarkId::from_parameter(file_path),
                 &lines,
-                |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
+                |b, graph| b.iter(|| black_box(find_shortest_path(graph.clone()))),
             );
         }
     }
@@ -128,18 +128,14 @@ fn benchmark_directed_vs_undirected(c: &mut Criterion) {
     group.bench_with_input(
         BenchmarkId::new("graph_type", "undirected"),
         &graph_refs,
-        |b, graph| {
-            b.iter(|| black_box(find_shortest_path_directed(black_box(graph.clone()), true)))
-        },
+        |b, graph| b.iter(|| black_box(find_shortest_path_directed(graph.clone(), true))),
     );
 
     // Benchmark as directed (bidirectional = false) - same input!
     group.bench_with_input(
         BenchmarkId::new("graph_type", "directed"),
         &graph_refs,
-        |b, graph| {
-            b.iter(|| black_box(find_shortest_path_directed(black_box(graph.clone()), false)))
-        },
+        |b, graph| b.iter(|| black_box(find_shortest_path_directed(graph.clone(), false))),
     );
 
     group.finish();
@@ -156,7 +152,7 @@ fn benchmark_directed_different_sizes(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(size),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(graph.clone()))),
         );
     }
 
@@ -193,46 +189,38 @@ fn benchmark_reference(c: &mut Criterion) {
             &graph_refs,
             |b, lines| {
                 b.iter(|| {
-                    black_box(find_shortest_path(black_box(
+                    black_box(find_shortest_path(
                         lines.clone(), // Vec<&str> clone is cheap
-                    )))
+                    ))
                 })
             },
         );
 
         // Safe Fibonacci heap: Dijkstra over pre-built adjacency list
         group.bench_with_input(BenchmarkId::new("fib_safe", name), &adj_list, |b, graph| {
-            b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
+            b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, graph)))
         });
 
         // Unsafe Fibonacci heap: Dijkstra over same adjacency list
         group.bench_with_input(
             BenchmarkId::new("fib_unsafe", name),
             &adj_list,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(dijkstra_fibonacci_unsafe(
-                        0,
-                        graph.len() - 1,
-                        black_box(graph),
-                    ))
-                })
-            },
+            |b, graph| b.iter(|| black_box(dijkstra_fibonacci_unsafe(0, graph.len() - 1, graph))),
         );
 
         // Pairing heap: Dijkstra over same adjacency list
         group.bench_with_input(BenchmarkId::new("pairing", name), &adj_list, |b, graph| {
-            b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph))))
+            b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, graph)))
         });
 
         // Radix heap: Dijkstra over same adjacency list
         group.bench_with_input(BenchmarkId::new("radix", name), &adj_list, |b, graph| {
-            b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph))))
+            b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, graph)))
         });
 
         // Dial's algorithm: Dijkstra over same adjacency list
         group.bench_with_input(BenchmarkId::new("dial", name), &adj_list, |b, graph| {
-            b.iter(|| black_box(dijkstra_dial(0, graph.len() - 1, black_box(graph))))
+            b.iter(|| black_box(dijkstra_dial(0, graph.len() - 1, graph)))
         });
     }
 
@@ -264,30 +252,28 @@ fn benchmark_heap_comparison(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("binary_heap", name),
             &graph_refs,
-            |b, graph| b.iter(|| black_box(find_shortest_path(black_box(graph.clone())))),
+            |b, graph| b.iter(|| black_box(find_shortest_path(graph.clone()))),
         );
 
         // Benchmark Fibonacci heap
         group.bench_with_input(
             BenchmarkId::new("fibonacci_heap", name),
             &adj_list,
-            |b, graph| {
-                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
-            },
+            |b, graph| b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, graph))),
         );
 
         // Benchmark Pairing heap
         group.bench_with_input(
             BenchmarkId::new("pairing_heap", name),
             &adj_list,
-            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
+            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, graph))),
         );
 
         // Benchmark Radix heap
         group.bench_with_input(
             BenchmarkId::new("radix_heap", name),
             &adj_list,
-            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph)))),
+            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, graph))),
         );
     }
 
@@ -320,68 +306,60 @@ fn benchmark_fibonacci_heap_comparison(c: &mut Criterion) {
         let res_radix = dijkstra_radix(0, adj_list.len() - 1, &adj_list);
         let res_dial = dijkstra_dial(0, adj_list.len() - 1, &adj_list);
 
+        // Different heaps may produce different (but equally optimal) paths.
+        // We only require the total distance to match.
         assert_eq!(
-            res_unsafe, res_safe,
-            "Mismatch for {}: unsafe={:?}, safe={:?}",
-            name, res_unsafe, res_safe
+            res_unsafe.1, res_safe.1,
+            "Distance mismatch for {} (unsafe vs safe)",
+            name
         );
         assert_eq!(
-            res_pairing, res_safe,
-            "Mismatch for {}: pairing={:?}, safe={:?}",
-            name, res_pairing, res_safe
+            res_pairing.1, res_safe.1,
+            "Distance mismatch for {} (pairing vs safe)",
+            name
         );
         assert_eq!(
-            res_radix, res_safe,
-            "Mismatch for {}: radix={:?}, safe={:?}",
-            name, res_radix, res_safe
+            res_radix.1, res_safe.1,
+            "Distance mismatch for {} (radix vs safe)",
+            name
         );
         assert_eq!(
-            res_dial, res_safe,
-            "Mismatch for {}: dial={:?}, safe={:?}",
-            name, res_dial, res_safe
+            res_dial.1, res_safe.1,
+            "Distance mismatch for {} (dial vs safe)",
+            name
         );
 
         // Benchmark unsafe (raw pointers) version
         group.bench_with_input(
             BenchmarkId::new("unsafe_raw_pointers", name),
             &adj_list,
-            |b, graph| {
-                b.iter(|| {
-                    black_box(dijkstra_fibonacci_unsafe(
-                        0,
-                        graph.len() - 1,
-                        black_box(graph),
-                    ))
-                })
-            },
+            |b, graph| b.iter(|| black_box(dijkstra_fibonacci_unsafe(0, graph.len() - 1, graph))),
         );
 
         // Benchmark safe (Rc<RefCell>) version
         group.bench_with_input(
             BenchmarkId::new("safe_rc_refcell", name),
             &adj_list,
-            |b, graph| {
-                b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, black_box(graph))))
-            },
+            |b, graph| b.iter(|| black_box(dijkstra_fibonacci(0, graph.len() - 1, graph))),
         );
 
         // Benchmark Pairing heap
         group.bench_with_input(
             BenchmarkId::new("pairing_heap", name),
             &adj_list,
-            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, black_box(graph)))),
+            |b, graph| b.iter(|| black_box(dijkstra_pairing(0, graph.len() - 1, graph))),
         );
 
         // Benchmark Radix heap
         group.bench_with_input(
             BenchmarkId::new("radix_heap", name),
             &adj_list,
-            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, black_box(graph)))),
+            |b, graph| b.iter(|| black_box(dijkstra_radix(0, graph.len() - 1, graph))),
         );
 
         // Benchmark Dial's algorithm
         group.bench_with_input(BenchmarkId::new("dial", name), &adj_list, |b, graph| {
-            b.iter(|| black_box(dijkstra_dial(0, graph.len() - 1, black_box(graph))))
+            b.iter(|| black_box(dijkstra_dial(0, graph.len() - 1, graph)))
         });
     }
 
