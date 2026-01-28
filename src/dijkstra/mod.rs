@@ -273,7 +273,7 @@ fn find_shortest_path_with(
         return Ok("-1".to_string());
     }
 
-    // Map path node ids to nodes - optimized string building
+    // Map path node ids to nodes - optimised string building
     let mut path_parts = Vec::with_capacity(path.len());
     for node_id in path {
         let node = parsed.nodes_reverse.get(&node_id).ok_or_else(|| {
