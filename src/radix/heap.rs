@@ -317,4 +317,21 @@ mod tests {
         assert_eq!(heap.extract_min(), Some((25, 3)));
         assert_eq!(heap.extract_min(), Some((40, 4)));
     }
+
+    #[test]
+    fn test_radix_heap_invariant() {
+        // If bucket_index is wrongly computed, the invariant may be violated:
+        // - 8 can remain in a higher bucket (computed vs old min_key = 0),
+        // - inserting 9 (vs new min_key = 7) goes to a lower bucket,
+        // - and extract_min can incorrectly return 9 before 8.
+        let mut heap = RadixHeap::new();
+
+        heap.insert(7, 1);
+        heap.insert(8, 2);
+        assert_eq!(heap.extract_min(), Some((7, 1)));
+
+        heap.insert(9, 3);
+        assert_eq!(heap.extract_min(), Some((8, 2)));
+        assert_eq!(heap.extract_min(), Some((9, 3)));
+    }
 }
