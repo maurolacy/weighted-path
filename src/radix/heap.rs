@@ -6,9 +6,9 @@
 /// Dijkstra's algorithm.
 ///
 /// The heap organizes elements into buckets based on the number of bits needed to
-/// represent the difference between their key and the current minimum key. This allows
+/// represent the delta between their key and the current minimum key. This allows
 /// for O(1) amortized `insert` and `decrease_key`, and O(log C) amortized `extract_min`,
-/// where C is the maximum key difference.
+/// where C is the maximum difference between keys.
 ///
 /// # Performance
 ///
@@ -34,10 +34,10 @@ pub struct RadixHandle {
 /// Radix heap implementation.
 ///
 /// The heap maintains a set of buckets, where bucket `i` contains nodes whose key
-/// difference from the current minimum requires `i` bits to represent. When we extract
+/// delta from the current minimum requires `i` bits to represent. When we extract
 /// the minimum, we redistribute nodes from the first non-empty bucket into lower buckets.
 pub struct RadixHeap {
-    /// Buckets: bucket[i] contains nodes where the key difference needs i bits.
+    /// Buckets: bucket[i] contains nodes where the key delta needs i bits.
     /// We use Vec with swap_remove for O(1) removal from any position.
     buckets: Vec<Vec<Node>>,
     /// Current minimum key (the last extracted key, or 0 initially).
@@ -54,7 +54,7 @@ impl RadixHeap {
     /// Create a new empty radix heap.
     pub fn new() -> Self {
         // u32 has 32 bits, so we need at most 33 buckets (0..=32)
-        // to represent any key difference
+        // to represent any key delta
         let max_buckets = 33;
         RadixHeap {
             buckets: vec![Vec::new(); max_buckets],
@@ -71,7 +71,7 @@ impl RadixHeap {
     /// `node_positions` Vec to avoid resizes during execution.
     pub fn with_capacity(max_node_id: usize) -> Self {
         // u32 has 32 bits, so we need at most 33 buckets (0..=32)
-        // to represent any key difference
+        // to represent any key delta
         let max_buckets = 33;
         RadixHeap {
             buckets: vec![Vec::new(); max_buckets],
@@ -83,16 +83,16 @@ impl RadixHeap {
 
     /// Get the bucket index for a given key.
     ///
-    /// The bucket index is the number of bits needed to represent (key - min_key),
+    /// The bucket index is the number of bits needed to represent (key ^ min_key),
     /// or 0 if key == min_key.
     fn bucket_index(&self, key: u32) -> usize {
         // By radix-heap invariant we must have key >= min_key here.
         // If this is violated, the heap's internal state is already inconsistent.
         debug_assert!(key >= self.min_key);
-        let diff = key - self.min_key;
-        // Find the position of the most significant bit
-        // This is the number of bits needed to represent the difference
-        (32 - diff.leading_zeros()) as usize
+        let delta = key ^ self.min_key;
+        // Find the position of the most significant bit.
+        // This is the number of bits needed to represent the delta between key and min_key
+        (32 - delta.leading_zeros()) as usize
     }
 
     /// Insert a node with the given key and node ID.
@@ -113,7 +113,7 @@ impl RadixHeap {
     /// Extract and return the minimum key and node ID.
     ///
     /// This operation redistributes nodes from the first non-empty bucket into
-    /// lower buckets based on their new key differences.
+    /// lower buckets based on their new key deltas.
     pub fn extract_min(&mut self) -> Option<(u32, usize)> {
         if self.size == 0 {
             return None;
@@ -316,5 +316,22 @@ mod tests {
         assert_eq!(heap.extract_min(), Some((15, 2)));
         assert_eq!(heap.extract_min(), Some((25, 3)));
         assert_eq!(heap.extract_min(), Some((40, 4)));
+    }
+
+    #[test]
+    fn test_radix_heap_invariant() {
+        // If bucket_index is wrongly computed, the invariant may be violated:
+        // - 8 can remain in a higher bucket (computed vs old min_key = 0),
+        // - inserting 9 (vs new min_key = 7) goes to a lower bucket,
+        // - and extract_min can incorrectly return 9 before 8.
+        let mut heap = RadixHeap::new();
+
+        heap.insert(7, 1);
+        heap.insert(8, 2);
+        assert_eq!(heap.extract_min(), Some((7, 1)));
+
+        heap.insert(9, 3);
+        assert_eq!(heap.extract_min(), Some((8, 2)));
+        assert_eq!(heap.extract_min(), Some((9, 3)));
     }
 }
