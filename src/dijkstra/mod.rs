@@ -299,8 +299,10 @@ fn find_shortest_path_with(
 /// * `lines` - Graph definition lines (see README for format)
 ///
 /// # Returns
-/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
-/// * `Err(message)` - Error message if input is invalid or no path exists
+/// * `(path, distance)` where:
+///   - `path` is a vector of node indices from `start` to `end` (inclusive),
+///   - `distance` is the total shortest-path distance, or `None` if no path exists.
+/// * `Err(message)` - Error message if input is invalid.
 pub fn find_shortest_path(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_binary) // Default to undirected/bidirectional
 }
@@ -342,8 +344,10 @@ pub fn find_shortest_path_dial(lines: Vec<&str>) -> Result<(String, Option<u32>)
 ///                     When `true`, if both A->B and B->A are specified, the last weight wins.
 ///
 /// # Returns
-/// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
-/// * `Err(message)` - Error message if input is invalid or no path exists
+/// * `(path, distance)` where:
+///   - `path` is a vector of node indices from `start` to `end` (inclusive),
+///   - `distance` is the total shortest-path distance, or `None` if no path exists.
+/// * `Err(message)` - Error message if input is invalid.
 pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
