@@ -99,15 +99,17 @@ B|D|2
 
 ## Output Format
 
-The program outputs the shortest path from the first node to the last node as a dash-separated string of node names, or `-1` if no path exists.
+The program outputs the shortest path from the first node to the last node as a dash-separated
+string of node names, followed by the total distance in parentheses, or `-1` if no path exists.
 
 ### Example Output
 
 ```text
-A-B-D
+A-B-D (weight: 4)
 ```
 
-This means the shortest path from node `A` to node `D` goes through node `B`.
+This means the shortest path from node `A` to node `D` goes through node `B` and has total
+weight `4`.
 
 ## Running Tests
 
@@ -122,12 +124,14 @@ This runs unit tests, including file-based test cases in `testdata/` (when prese
 The program uses Dijkstra's algorithm to find the shortest path:
 
 1. Parse the graph and build an adjacency list.
-2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node.
-3. Return the path as a dash-separated string, or `-1` if no path exists.
+2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node and
+   its total distance.
+3. Return the path as a dash-separated string together with the total distance, or `-1` if no
+   path exists.
 
 ## Edge Cases
 
-- **Single node**: Returns the node name itself.
+- **Single node**: Returns the node name itself with distance 0 (e.g. `A (weight: 0)`).
 - **No path exists**: Returns `-1`.
 - **Empty input**: Returns `-1`.
 - **Zero nodes**: Returns `-1`.
