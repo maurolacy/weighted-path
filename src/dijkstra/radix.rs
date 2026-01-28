@@ -3,7 +3,7 @@ use crate::radix::{RadixHandle, RadixHeap};
 
 /// Dijkstra implementation using a radix heap.
 ///
-/// Radix heaps are optimized for algorithms with non-decreasing integer keys,
+/// Radix heaps are optimised for algorithms with non-decreasing integer keys,
 /// which makes them ideal for Dijkstra's algorithm. They provide O(1) amortized
 /// `insert` and `decrease_key`, and O(log C) amortized `extract_min`, where C
 /// is the maximum key difference.

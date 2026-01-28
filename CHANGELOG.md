@@ -1,0 +1,99 @@
+## Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is loosely inspired by [Keep a Changelog](https://keepachangelog.com/),
+and the project follows Semantic Versioning.
+
+## [0.4.1] - 2026-01-26
+
+### Fixed
+- Add an explicit upper bound to Dial's bucket count and panic with a clear
+  message when a distance would exceed that (`MAX_BUCKETS` guard), instead of
+  risking huge allocations or silent misbehaviour.
+
+### Changed
+- Simplify `DialHeap` internals (position updates / bookkeeping) while keeping
+  behaviour and benchmarks intact.
+
+## [0.4.0] - 2026-01-26
+
+### Added
+- Implement **Dial's algorithm** as `DialHeap`.
+- Integrate Dial-based Dijkstra into:
+  - the core `dijkstra` module,
+  - the `weighted_path` binary (`--heap dial`),
+  - the Criterion benchmarks.
+
+### Documentation
+- Extend `README.md` with Dial heap details, complexity, and benchmark numbers.
+
+## [0.3.1] - 2026-01-25
+
+### Added
+- `--profile` / `-p` flag in the `weighted_path` binary to run Dijkstra
+  repeatedly on the same graph for profiling.
+
+### Changed
+- Minor code-style and documentation polish (iterator syntax, README bullets).
+
+## [0.3.0] - 2026-01-24
+
+### Added
+- Implement **radix heap** and a Dijkstra variant using it.
+- Integrate the radix-heap Dijkstra into:
+  - the `weighted_path` binary (`--heap radix`),
+  - the benchmarking suite.
+- Add an MIT `LICENSE`.
+
+### Performance
+- Replace `HashMap` node-position tracking in the radix heap with a
+  `Vec<Option<(bucket_idx, pos)>>` for dense node IDs.
+- Pre-allocate node positions with `with_capacity` to avoid resizes.
+- Use `swap_remove` inside buckets to avoid O(n) removals.
+
+### Documentation
+- Update `README.md` with radix heap description and benchmark results.
+
+## [0.2.0] - 2026-01-22
+
+### Added
+- **Generic Dijkstra** over an abstract `PriorityQueue` trait, so all heap
+  implementations can share a single Dijkstra core.
+
+### Changed
+- Implement `PriorityQueue` directly for the existing heaps instead of wrapping
+  them in adapter structs.
+- Remove the old `generic` module and rename `dijkstra_generic` to just
+  `dijkstra`.
+- Update `README.md` to reflect the new structure and heap abstraction.
+
+### Maintenance
+- `cargo update` and `cargo clippy` cleanups.
+
+## [0.1.1] - 2026-01-22
+
+### Changed
+- Small documentation and README tweaks.
+
+### Maintenance
+- `cargo update` and `cargo clippy` to keep dependencies and linting fresh.
+
+## [0.1.0] - 2026-01-22
+
+Initial tagged release.
+
+### Added
+- Core **weighted shortest path** functionality using Dijkstra's algorithm.
+- Graph parsing utilities and simple CLI (`weighted_path`) that:
+  - reads graphs from a file,
+  - prints shortest paths between nodes.
+- Initial **BinaryHeap-based** Dijkstra implementation.
+- **Fibonacci heap** implementations:
+  - an unsafe/raw-pointer version,
+  - a safe `Rc<RefCell<…>>` version.
+- Dijkstra variants using both Fibonacci heaps.
+- Reference benchmarks and random graph generators (sparse / dense) for
+  comparing heap variants.
+- A basic `README.md` describing usage and early benchmark results.
+
