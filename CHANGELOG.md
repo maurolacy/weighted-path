@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is loosely inspired by [Keep a Changelog](https://keepachangelog.com/),
 and the project follows Semantic Versioning.
 
+## [0.5.0] - 2026-01-28
+
+### Breaking
+
+- Change the core Dijkstra API to return both **path and distance**:
+  `dijkstra<Q: PriorityQueue>(...) -> (Vec<usize>, Option<u32>)` instead of just a path.
+- Update all heap-specific wrappers (`dijkstra_binary`, `dijkstra_fibonacci`,
+  `dijkstra_fibonacci_unsafe`, `dijkstra_pairing`, `dijkstra_radix`, `dijkstra_dial`) to
+  return `(path, distance)` as well.
+
+### Added
+
+- Extend the high-level helpers (`find_shortest_path*`) to return
+  `(String, Option<u32>)`, so callers get the human-readable path **and** total
+  distance in one call.
+
+### Changed
+
+- `weighted_path` binary now uses the helpers and reports:
+  `Node0-…-NodeN (weight: X)` in normal mode.
+- Benchmarks and tests updated to:
+  - use the new `(path, distance)` / `(String, Option<u32>)` signatures,
+  - compare heaps by **distance** (paths may legitimately differ when multiple
+    shortest paths exist).
+
 ## [0.4.2] - 2026-01-28
 
 ### Fixed
