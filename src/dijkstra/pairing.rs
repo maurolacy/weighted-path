@@ -31,6 +31,10 @@ impl PriorityQueue for PairingHeap {
 /// complexity. In practice, they often outperform Fibonacci heaps due to lower
 /// constant factors and simpler operations.
 /// This is a thin wrapper around the generic Dijkstra implementation.
-pub fn dijkstra_pairing(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_pairing(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> (Vec<usize>, Option<u32>) {
     crate::dijkstra::dijkstra(start, end, graph, PairingHeap::new())
 }

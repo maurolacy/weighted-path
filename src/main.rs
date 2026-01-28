@@ -126,8 +126,8 @@ fn run() -> Result<(), String> {
 
         println!("Done");
     } else {
-        // Normal mode: find shortest path and print result
-        let result = match heap_impl.as_str() {
+        // Normal mode: find shortest path (via helpers) and print result + total weight.
+        let (path_str, distance) = match heap_impl.as_str() {
             "binary" | "bin" => find_shortest_path(line_refs),
             "fib" => find_shortest_path_fibonacci(line_refs),
             "fib-unsafe" => find_shortest_path_fibonacci_unsafe(line_refs),
@@ -143,8 +143,12 @@ fn run() -> Result<(), String> {
         }
         .map_err(|e| format!("Graph processing error: {}", e))?;
 
-        // Print the result
-        println!("{}", result);
+        if let Some(total) = distance {
+            println!("{} (weight: {})", path_str, total);
+        } else {
+            // No path found or no well-defined distance.
+            println!("{}", path_str);
+        }
     }
 
     Ok(())
