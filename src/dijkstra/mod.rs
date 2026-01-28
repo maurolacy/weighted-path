@@ -25,9 +25,10 @@ pub use radix::dijkstra_radix;
 /// * `graph` - Adjacency list where `graph[u]` contains `(v, weight)` edges.
 ///
 /// Returns:
-/// * A vector of node indices representing the shortest path from `start` to `end`
-///   (inclusive). Implementations should return an empty vector when no path exists.
-pub type DijkstraFn = fn(usize, usize, &[Vec<(usize, u32)>]) -> Vec<usize>;
+/// * `(path, distance)` where:
+///   - `path` is a vector of node indices from `start` to `end` (inclusive),
+///   - `distance` is the total shortest-path distance, or `None` if no path exists.
+pub type DijkstraFn = fn(usize, usize, &[Vec<(usize, u32)>]) -> (Vec<usize>, Option<u32>);
 
 /// Parsed graph representation used by both the main API and benchmarks.
 pub struct ParsedGraph<'a> {
@@ -168,7 +169,7 @@ pub fn dijkstra<Q: PriorityQueue>(
     end: usize,
     graph: &[Vec<(usize, u32)>],
     mut heap: Q,
-) -> Vec<usize> {
+) -> (Vec<usize>, Option<u32>) {
     let mut distances = vec![u32::MAX; graph.len()];
     distances[start] = 0;
     let mut previous = vec![None; graph.len()];
@@ -230,7 +231,7 @@ pub fn dijkstra<Q: PriorityQueue>(
     let mut current = end;
 
     if distances[end] == u32::MAX {
-        return path; // No path found
+        return (path, None); // No path found
     }
 
     while let Some(prev) = previous[current] {
@@ -239,38 +240,41 @@ pub fn dijkstra<Q: PriorityQueue>(
     }
     path.push(start);
     path.reverse();
-    path
+    (path, Some(distances[end]))
 }
 
 fn find_shortest_path_with(
     lines: Vec<&str>,
     bidirectional: bool,
     dijkstra_impl: DijkstraFn,
-) -> Result<String, String> {
+) -> Result<(String, Option<u32>), String> {
     if lines.is_empty() {
-        return Ok("-1".to_string());
+        return Ok(("-1".to_string(), None));
     }
 
     let parsed = parse_graph(&lines, bidirectional)?;
     let num_nodes = parsed.graph.len();
 
     if num_nodes == 0 {
-        return Ok("-1".to_string());
+        return Ok(("-1".to_string(), None));
     }
 
     if num_nodes == 1 {
-        return Ok(parsed
-            .nodes_reverse
-            .get(&0)
-            .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
-            .to_string());
+        return Ok((
+            parsed
+                .nodes_reverse
+                .get(&0)
+                .ok_or_else(|| "Internal error: single node not found in reverse map".to_string())?
+                .to_string(),
+            Some(0),
+        ));
     }
 
     // Use the provided Dijkstra implementation
-    let path = dijkstra_impl(0, num_nodes - 1, &parsed.graph);
+    let (path, distance) = dijkstra_impl(0, num_nodes - 1, &parsed.graph);
 
     if path.len() <= 1 {
-        return Ok("-1".to_string());
+        return Ok(("-1".to_string(), None));
     }
 
     // Map path node ids to nodes - optimised string building
@@ -284,7 +288,7 @@ fn find_shortest_path_with(
         })?;
         path_parts.push(*node);
     }
-    Ok(path_parts.join("-"))
+    Ok((path_parts.join("-"), distance))
 }
 
 /// Find the shortest path in a weighted graph using Dijkstra's algorithm.
@@ -297,32 +301,34 @@ fn find_shortest_path_with(
 /// # Returns
 /// * `Ok(path)` - Shortest path as a hyphen-separated string (e.g., "A-B-C")
 /// * `Err(message)` - Error message if input is invalid or no path exists
-pub fn find_shortest_path(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_binary) // Default to undirected/bidirectional
 }
 
 /// Find the shortest path using the safe Fibonacci-heap Dijkstra implementation.
-pub fn find_shortest_path_fibonacci(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path_fibonacci(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_fibonacci)
 }
 
 /// Find the shortest path using the unsafe (raw pointer) Fibonacci-heap Dijkstra implementation.
-pub fn find_shortest_path_fibonacci_unsafe(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path_fibonacci_unsafe(
+    lines: Vec<&str>,
+) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_fibonacci_unsafe)
 }
 
 /// Find the shortest path using the Pairing-heap Dijkstra implementation.
-pub fn find_shortest_path_pairing(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path_pairing(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_pairing)
 }
 
 /// Find the shortest path using the Radix-heap Dijkstra implementation.
-pub fn find_shortest_path_radix(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path_radix(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_radix)
 }
 
 /// Find the shortest path using Dial's algorithm (bucket-based Dijkstra).
-pub fn find_shortest_path_dial(lines: Vec<&str>) -> Result<String, String> {
+pub fn find_shortest_path_dial(lines: Vec<&str>) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, true, dijkstra_dial)
 }
 
@@ -341,7 +347,7 @@ pub fn find_shortest_path_dial(lines: Vec<&str>) -> Result<String, String> {
 pub fn find_shortest_path_directed(
     lines: Vec<&str>,
     bidirectional: bool,
-) -> Result<String, String> {
+) -> Result<(String, Option<u32>), String> {
     find_shortest_path_with(lines, bidirectional, dijkstra_binary)
 }
 
@@ -352,35 +358,35 @@ mod tests {
     #[test]
     fn test_empty_input() {
         let result = find_shortest_path(vec![]);
-        assert_eq!(result, Ok("-1".to_string()));
+        assert_eq!(result, Ok(("-1".to_string(), None)));
     }
 
     #[test]
     fn test_single_node() {
         let input = vec!["1", "A"];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("A".to_string()));
+        assert_eq!(result, Ok(("A".to_string(), Some(0))));
     }
 
     #[test]
     fn test_two_nodes_connected() {
         let input = vec!["2", "A", "B", "A|B|5"];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("A-B".to_string()));
+        assert_eq!(result, Ok(("A-B".to_string(), Some(5))));
     }
 
     #[test]
     fn test_two_nodes_disconnected() {
         let input = vec!["2", "A", "B"];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("-1".to_string()));
+        assert_eq!(result, Ok(("-1".to_string(), None)));
     }
 
     #[test]
     fn test_simple_path() {
         let input = vec!["3", "A", "B", "C", "A|B|2", "B|C|3"];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("A-B-C".to_string()));
+        assert_eq!(result, Ok(("A-B-C".to_string(), Some(5))));
     }
 
     #[test]
@@ -390,7 +396,7 @@ mod tests {
             "4", "A", "B", "C", "D", "A|B|1", "B|C|1", "C|D|1", "A|D|100",
         ];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("A-B-C-D".to_string()));
+        assert_eq!(result, Ok(("A-B-C-D".to_string(), Some(3))));
     }
 
     #[test]
@@ -461,7 +467,7 @@ mod tests {
     fn test_zero_nodes() {
         let input = vec!["0"];
         let result = find_shortest_path(input);
-        assert_eq!(result, Ok("-1".to_string()));
+        assert_eq!(result, Ok(("-1".to_string(), None)));
     }
 
     #[test]
@@ -473,8 +479,9 @@ mod tests {
             vec![(0, 4), (3, 5)], // node 2
             vec![(1, 1), (2, 5)], // node 3
         ];
-        let path_binary = dijkstra_binary(0, 3, &graph);
-        let path_fib = dijkstra_fibonacci(0, 3, &graph);
+        let (path_binary, dist_binary) = dijkstra_binary(0, 3, &graph);
+        let (path_fib, dist_fib) = dijkstra_fibonacci(0, 3, &graph);
+        assert_eq!(dist_binary, dist_fib);
         assert_eq!(path_binary, path_fib);
         assert_eq!(path_binary, vec![0, 1, 3]);
     }
@@ -522,13 +529,13 @@ mod tests {
         ];
 
         for (graph, start, end, expected_path) in test_cases {
-            let path_binary = dijkstra_binary(start, end, &graph);
-            let path_fib = dijkstra_fibonacci(start, end, &graph);
+            let (path_binary, dist_binary) = dijkstra_binary(start, end, &graph);
+            let (_path_fib, dist_fib) = dijkstra_fibonacci(start, end, &graph);
 
             assert_eq!(
-                path_binary, path_fib,
-                "Mismatch for graph: start={}, end={}, binary={:?}, fib={:?}",
-                start, end, path_binary, path_fib
+                dist_binary, dist_fib,
+                "Distance mismatch for graph: start={}, end={}, binary={:?}, fib={:?}",
+                start, end, dist_binary, dist_fib
             );
 
             if !expected_path.is_empty() {
@@ -547,7 +554,7 @@ mod tests {
         let input = vec!["2", "A", "B", "A|B|5", "", "A|B|3"];
         let result = find_shortest_path(input);
         // Should work, but the last edge will overwrite the first
-        assert_eq!(result, Ok("A-B".to_string()));
+        assert_eq!(result, Ok(("A-B".to_string(), Some(3))));
     }
 
     #[test]
@@ -580,7 +587,7 @@ mod tests {
             let result = find_shortest_path(input_lines);
 
             match result {
-                Ok(actual) => {
+                Ok((actual, _distance)) => {
                     assert_eq!(
                         actual, expected_output,
                         "Mismatch for input{}.txt: expected '{}', got '{}'",

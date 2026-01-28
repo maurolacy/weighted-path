@@ -31,7 +31,11 @@ impl PriorityQueue for DialHeap {
 /// Dijkstra implementation using Dial's algorithm.
 ///
 /// Uses a smaller initial bucket allocation and lets the heap grow dynamically.
-pub fn dijkstra_dial(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_dial(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> (Vec<usize>, Option<u32>) {
     let max_nodes = graph.len();
     // Start with a smaller initial allocation (e.g., 1000 buckets)
     // The heap will grow dynamically via ensure_bucket_capacity as needed

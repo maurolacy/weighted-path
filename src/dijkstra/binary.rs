@@ -52,6 +52,10 @@ impl PriorityQueue for BinaryHeapPQ {
 /// Dijkstra implementation using a binary heap.
 ///
 /// This is a thin wrapper around the generic Dijkstra implementation.
-pub fn dijkstra_binary(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_binary(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> (Vec<usize>, Option<u32>) {
     crate::dijkstra::dijkstra(start, end, graph, BinaryHeapPQ::new())
 }

@@ -30,7 +30,11 @@ impl PriorityQueue for RadixHeap {
 }
 
 /// Dijkstra implementation using a radix heap.
-pub fn dijkstra_radix(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_radix(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> (Vec<usize>, Option<u32>) {
     // Pre-allocate with the number of nodes to avoid resizes
     let max_node_id = graph.len().saturating_sub(1);
     crate::dijkstra::dijkstra(start, end, graph, RadixHeap::with_capacity(max_node_id))

@@ -29,6 +29,10 @@ impl PriorityQueue for FibonacciHeap {
 ///
 /// Memory-safe but slower than the raw-pointer variant due to Rc/RefCell overhead.
 /// This is a thin wrapper around the generic Dijkstra implementation.
-pub fn dijkstra_fibonacci(start: usize, end: usize, graph: &[Vec<(usize, u32)>]) -> Vec<usize> {
+pub fn dijkstra_fibonacci(
+    start: usize,
+    end: usize,
+    graph: &[Vec<(usize, u32)>],
+) -> (Vec<usize>, Option<u32>) {
     crate::dijkstra::dijkstra(start, end, graph, FibonacciHeap::new())
 }
