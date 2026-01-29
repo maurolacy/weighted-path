@@ -300,3 +300,26 @@ breakdowns.
 **Architecture:**
 
 The project uses a trait-based design where all heap types implement the `PriorityQueue` trait, allowing a single generic Dijkstra implementation to work with any heap type.
+
+## Correctness, bugs, and security
+
+This project aims to be **correct and well-tested**, but it is still an experimental “lab”
+for comparing heap implementations.
+
+- **Correctness**: All heaps are exercised by unit tests and cross-checked in benchmarks so
+  that they produce the same shortest-path **distance** on the same graphs. The unsafe
+  Fibonacci heap is kept in sync with the safe variant via these tests.
+- **Bugs**: If you find a bug (wrong path, wrong distance, panic, etc.), please open an
+  issue with:
+  - the exact input file (or a minimal reproducer),
+  - which heap you were using (`--heap` value),
+  - the observed output and the expected one.
+  This makes it much easier to reproduce and fix the problem.
+- **Security**: The code is intended for offline graph experiments, not for processing
+  untrusted input in production services. There is an `unsafe` Fibonacci heap implementation;
+  it is tested and benchmarked, but should be treated with the usual care that any `unsafe`
+  code deserves.
+
+If you believe you have found a **security-relevant** issue, please avoid posting full
+exploits publicly; instead, report the details privately (for example via the repository’s
+security contact or a private issue if available).
