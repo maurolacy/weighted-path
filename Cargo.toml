@@ -3,6 +3,8 @@ name = "weighted_path"
 version = "0.5.0"
 edition = "2024"
 license = "MIT"
+description = "Shortest paths in a weighted graph using Dijkstra's algorithm"
+repository = "https://github.com/maurolacy/weighted-path"
 
 
 [[bin]]
