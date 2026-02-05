@@ -156,7 +156,7 @@ The program validates input and provides clear error messages for:
 
 ## Benchmarking
 
-The project includes benchmarking support using Criterion.rs to measure performance across different graph sizes and edge densities.
+The project includes benchmarking support using Criterion.rs to measure performance across different graph sizes, edge densities, and heap impls.
 
 ### Generating Test Graphs
 
