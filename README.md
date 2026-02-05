@@ -64,9 +64,48 @@ let (path, distance) = dijkstra::find_shortest_path_radix(lines.clone())?;
 let (path, distance) = dijkstra::find_shortest_path_dial(lines.clone())?;
 ```
 
-### Low-Level API
+### Parsing and Using the Low-Level API
 
-For more control, you can use the heap-specific Dijkstra functions directly:
+For more control, you can parse the graph yourself and then call the underlying Dijkstra functions:
+
+```rust
+use weighted_path::dijkstra;
+
+// Start with graph in string format
+let graph_str = "4
+A
+B
+C
+D
+A|B|2
+C|B|11
+C|D|3
+B|D|2";
+
+// Parse the graph (bidirectional/undirected)
+let parsed = dijkstra::parse_graph(&graph_str.lines().collect::<Vec<&str>>(), true)
+    .expect("Failed to parse graph");
+
+// Now you have access to:
+// - parsed.graph: adjacency list Vec<Vec<(usize, u32)>>
+// - parsed.nodes_reverse: HashMap<usize, &str> mapping indices to node names
+
+// Find shortest path from first node (index 0) to last node (index 3)
+let (path_indices, distance) = dijkstra::dijkstra_binary(0, 3, &parsed.graph);
+
+// Convert path indices back to node names
+let path_names: Vec<&str> = path_indices
+    .iter()
+    .map(|&idx| parsed.nodes_reverse.get(&idx).unwrap())
+    .collect();
+
+println!("Path: {:?}, Distance: {:?}", path_names, distance);
+// Output: Path: ["A", "B", "D"], Distance: Some(4)
+```
+
+### Low-Level API with Pre-built Graph
+
+You can also use the heap-specific Dijkstra functions directly with a pre-built adjacency list, e.g. using the `dijkstra_binary` function:
 
 ```rust
 use weighted_path::dijkstra;
