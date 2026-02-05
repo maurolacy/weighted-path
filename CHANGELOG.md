@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is loosely inspired by [Keep a Changelog](https://keepachangelog.com/),
 and the project follows Semantic Versioning.
 
+## [0.5.1] - 2026-02-05
+
+### Changed
+
+- Doc / package adjustments.
+
 ## [0.5.0] - 2026-01-28
 
 ### Breaking
