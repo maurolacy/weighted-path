@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is loosely inspired by [Keep a Changelog](https://keepachangelog.com/),
 and the project follows Semantic Versioning.
 
+## [0.6.0] - 2026-01-22
+
+### Changed
+
+- Add comprehensive "Library Usage" section with examples for:
+  - Basic usage with high-level helpers.
+  - Different heap implementations.
+  - Parsing graphs and using the low-level API.
+  - Directed vs undirected graphs.
+  - Generic Dijkstra function with custom heaps.
+- Update `Cargo.toml`:
+  - Add explicit `[lib]` section.
+  - Add `keywords` and `categories` for better crates.io discoverability.
+
+### Documentation
+
+- Add example showing the full workflow: parsing graph strings with `parse_graph`, calling underlying Dijkstra functions, and converting path indices back to node names.
+- Clarify separation between library API (returns `Result` types) and command-line tool concerns (file I/O, argument parsing).
+
 ## [0.5.1] - 2026-02-05
 
 ### Changed
