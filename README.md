@@ -82,8 +82,10 @@ C|B|11
 C|D|3
 B|D|2";
 
+let lines: Vec<&str> = graph_str.lines().collect();
+
 // Parse the graph (bidirectional/undirected)
-let parsed = dijkstra::parse_graph(&graph_str.lines().collect::<Vec<&str>>(), true)
+let parsed = dijkstra::parse_graph(&lines, true)
     .expect("Failed to parse graph");
 
 // Now you have access to:
@@ -96,7 +98,7 @@ let (path_indices, distance) = dijkstra::dijkstra_binary(0, 3, &parsed.graph);
 // Convert path indices back to node names
 let path_names: Vec<&str> = path_indices
     .iter()
-    .map(|&idx| parsed.nodes_reverse.get(&idx).unwrap())
+    .map(|&idx| *parsed.nodes_reverse.get(&idx).unwrap())
     .collect();
 
 println!("Path: {:?}, Distance: {:?}", path_names, distance);
@@ -146,9 +148,20 @@ For maximum flexibility, use the generic `dijkstra` function with any heap imple
 use weighted_path::dijkstra;
 use weighted_path::radix::RadixHeap;
 
-let graph = vec![/* adjacency list */];
+// Build adjacency list: graph[u] contains (v, weight) edges
+let graph = vec![
+    vec![(1, 2), (2, 5)],  // Node 0 -> Node 1 (weight 2), Node 0 -> Node 2 (weight 5)
+    vec![(2, 1), (3, 3)],  // Node 1 -> Node 2 (weight 1), Node 1 -> Node 3 (weight 3)
+    vec![(3, 2)],          // Node 2 -> Node 3 (weight 2)
+    vec![],                 // Node 3 (no outgoing edges)
+];
+
+// Use generic dijkstra with a RadixHeap
 let mut heap = RadixHeap::new();
-let (path, distance) = dijkstra::dijkstra(0, 3, &graph, &mut heap);
+let (path, distance) = dijkstra::dijkstra(0, 3, &graph, heap);
+
+assert_eq!(path, vec![0, 1, 3]);
+assert_eq!(distance, Some(5));
 ```
 
 ## Command-Line Tool
