@@ -1,6 +1,6 @@
 [package]
 name = "weighted_path"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2024"
 license = "MIT"
 description = "A Rust library for finding shortest paths in weighted graphs using Dijkstra's algorithm with multiple heap implementations"
