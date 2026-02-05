@@ -1,3 +1,132 @@
+//! Dijkstra's shortest path algorithm with multiple heap implementations.
+//!
+//! This module provides implementations of Dijkstra's algorithm using various
+//! priority queue (heap) data structures, allowing you to choose the optimal
+//! heap for your use case.
+//!
+//! # Basic Example
+//!
+//! ```
+//! use weighted_path::dijkstra;
+//!
+//! // Parse graph from lines
+//! let lines = vec![
+//!     "4",
+//!     "A", "B", "C", "D",
+//!     "A|B|2",
+//!     "C|B|11",
+//!     "C|D|3",
+//!     "B|D|2",
+//! ];
+//!
+//! // Find shortest path using binary heap (default)
+//! let (path, distance) = dijkstra::find_shortest_path(lines.clone())
+//!     .expect("Failed to parse graph");
+//!
+//! assert_eq!(path, "A-B-D");
+//! assert_eq!(distance, Some(4));
+//! ```
+//!
+//! # Using Different Heap Implementations
+//!
+//! ```
+//! use weighted_path::dijkstra;
+//!
+//! let lines = vec![
+//!     "3", "A", "B", "C",
+//!     "A|B|1", "B|C|2",
+//! ];
+//!
+//! // Binary heap (default, good general-purpose choice)
+//! let (path, distance) = dijkstra::find_shortest_path(lines.clone())?;
+//!
+//! // Fibonacci heap (faster for dense graphs)
+//! let (path, distance) = dijkstra::find_shortest_path_fibonacci(lines.clone())?;
+//!
+//! // Pairing heap (often faster than Fibonacci in practice)
+//! let (path, distance) = dijkstra::find_shortest_path_pairing(lines.clone())?;
+//!
+//! // Radix heap (excellent for integer weights)
+//! let (path, distance) = dijkstra::find_shortest_path_radix(lines.clone())?;
+//!
+//! // Dial's algorithm (optimal for small integer weights)
+//! let (path, distance) = dijkstra::find_shortest_path_dial(lines.clone())?;
+//! # Ok::<(), String>(())
+//! ```
+//!
+//! # Parsing and Using the Low-Level API
+//!
+//! ```
+//! use weighted_path::dijkstra;
+//!
+//! // Start with graph in string format
+//! let graph_str = "4
+//! A
+//! B
+//! C
+//! D
+//! A|B|2
+//! C|B|11
+//! C|D|3
+//! B|D|2";
+//!
+//! let lines: Vec<&str> = graph_str.lines().collect();
+//!
+//! // Parse the graph (bidirectional/undirected)
+//! let parsed = dijkstra::parse_graph(&lines, true)
+//!     .expect("Failed to parse graph");
+//!
+//! // Find shortest path from first node (index 0) to last node (index 3)
+//! let (path_indices, distance) = dijkstra::dijkstra_binary(0, 3, &parsed.graph);
+//!
+//! // Convert path indices back to node names
+//! let path_names: Vec<&str> = path_indices
+//!     .iter()
+//!     .map(|&idx| *parsed.nodes_reverse.get(&idx).unwrap())
+//!     .collect();
+//!
+//! assert_eq!(path_names, vec!["A", "B", "D"]);
+//! assert_eq!(distance, Some(4));
+//! ```
+//!
+//! # Low-Level API with Pre-built Graph
+//!
+//! ```
+//! use weighted_path::dijkstra;
+//!
+//! // Build adjacency list: graph[u] contains (v, weight) edges
+//! let graph = vec![
+//!     vec![(1, 2), (2, 5)],  // Node 0 -> Node 1 (weight 2), Node 0 -> Node 2 (weight 5)
+//!     vec![(2, 1), (3, 3)],  // Node 1 -> Node 2 (weight 1), Node 1 -> Node 3 (weight 3)
+//!     vec![(3, 2)],          // Node 2 -> Node 3 (weight 2)
+//!     vec![],                 // Node 3 (no outgoing edges)
+//! ];
+//!
+//! // Find shortest path from node 0 to node 3
+//! let (path, distance) = dijkstra::dijkstra_binary(0, 3, &graph);
+//!
+//! assert_eq!(path, vec![0, 1, 3]);
+//! assert_eq!(distance, Some(5));
+//! ```
+//!
+//! # Directed Graphs
+//!
+//! ```
+//! use weighted_path::dijkstra;
+//!
+//! let lines = vec![
+//!     "3", "A", "B", "C",
+//!     "A|B|1", "B|C|2",
+//! ];
+//!
+//! // Process as directed graph (edges are one-way only)
+//! let (path, distance) = dijkstra::find_shortest_path_directed(lines.clone(), false)?;
+//!
+//! // Process as undirected graph (edges are bidirectional)
+//! let (path, distance) = dijkstra::find_shortest_path_directed(lines, true)?;
+//! # Ok::<(), String>(())
+//! ```
+
 pub mod binary;
 pub mod dial;
 pub mod fib;
@@ -39,6 +168,31 @@ pub struct ParsedGraph<'a> {
 }
 
 /// Parse a weighted graph from lines into an adjacency list and reverse node map.
+///
+/// # Example
+///
+/// ```
+/// use weighted_path::dijkstra;
+///
+/// let lines = vec![
+///     "3",
+///     "A", "B", "C",
+///     "A|B|2",
+///     "B|C|3",
+/// ];
+///
+/// // Parse as undirected graph (bidirectional edges)
+/// let parsed = dijkstra::parse_graph(&lines, true)?;
+///
+/// // Access the adjacency list
+/// assert_eq!(parsed.graph[0], vec![(1, 2)]); // A -> B (weight 2)
+/// assert_eq!(parsed.graph[1], vec![(0, 2), (2, 3)]); // B -> A (weight 2), B -> C (weight 3)
+///
+/// // Access node names by index
+/// assert_eq!(parsed.nodes_reverse.get(&0), Some(&"A"));
+/// assert_eq!(parsed.nodes_reverse.get(&1), Some(&"B"));
+/// # Ok::<(), String>(())
+/// ```
 pub fn parse_graph<'a>(
     lines: &'a [&'a str],
     bidirectional: bool,
@@ -164,6 +318,28 @@ pub fn parse_graph<'a>(
 /// - `dijkstra_fibonacci_unsafe` - Unsafe Fibonacci heap
 /// - `dijkstra_pairing` - Pairing heap
 /// - `dijkstra_radix` - Radix heap
+///
+/// # Example
+///
+/// ```
+/// use weighted_path::dijkstra;
+/// use weighted_path::radix::RadixHeap;
+///
+/// // Build adjacency list: graph[u] contains (v, weight) edges
+/// let graph = vec![
+///     vec![(1, 2), (2, 5)],  // Node 0 -> Node 1 (weight 2), Node 0 -> Node 2 (weight 5)
+///     vec![(2, 1), (3, 3)],  // Node 1 -> Node 2 (weight 1), Node 1 -> Node 3 (weight 3)
+///     vec![(3, 2)],          // Node 2 -> Node 3 (weight 2)
+///     vec![],                 // Node 3 (no outgoing edges)
+/// ];
+///
+/// // Use generic dijkstra with a RadixHeap
+/// let mut heap = RadixHeap::new();
+/// let (path, distance) = dijkstra::dijkstra(0, 3, &graph, heap);
+///
+/// assert_eq!(path, vec![0, 1, 3]);
+/// assert_eq!(distance, Some(5));
+/// ```
 pub fn dijkstra<Q: PriorityQueue>(
     start: usize,
     end: usize,
