@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT"
 description = "A Rust library for finding shortest paths in weighted graphs using Dijkstra's algorithm with multiple heap implementations"
 repository = "https://github.com/maurolacy/weighted-path"
-keywords = ["dijkstra", "shortest-path", "graph", "algorithm", "heap", "priority-queue"]
+keywords = ["dijkstra", "shortest-path", "graph", "priority-queue", "heap"]
 categories = ["algorithms", "data-structures"]
 
 [lib]
