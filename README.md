@@ -1,18 +1,128 @@
 # Weighted Path
 
-A Rust implementation of Dijkstra's shortest path algorithm that finds the optimal path between two nodes in a weighted, undirected graph.
+A Rust library for finding shortest paths in weighted graphs using Dijkstra's algorithm with multiple heap implementations. Includes a command-line tool for convenience.
 
 ## Description
 
-This program takes a graph definition as input and finds the shortest weighted path from the first node to the last node using Dijkstra's algorithm. The graph is undirected (edges work in both directions) and edges have positive weights.
+This library provides multiple implementations of Dijkstra's shortest path algorithm, allowing you to choose the optimal heap data structure for your use case. The library supports both directed and undirected graphs with positive edge weights.
 
-## Building
+## Library Usage
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+weighted_path = "0.5"
+```
+
+### Basic Example
+
+```rust
+use weighted_path::dijkstra;
+
+// Parse graph from lines
+let lines = vec![
+    "4",
+    "A", "B", "C", "D",
+    "A|B|2",
+    "C|B|11",
+    "C|D|3",
+    "B|D|2",
+];
+
+// Find shortest path using binary heap (default)
+let (path, distance) = dijkstra::find_shortest_path(lines.clone())
+    .expect("Failed to parse graph");
+
+println!("Path: {}, Distance: {:?}", path, distance);
+// Output: Path: A-B-D, Distance: Some(4)
+```
+
+### Using Different Heap Implementations
+
+```rust
+use weighted_path::dijkstra;
+
+let lines = vec![/* ... */];
+
+// Binary heap (default, good general-purpose choice)
+let (path, distance) = dijkstra::find_shortest_path(lines.clone())?;
+
+// Fibonacci heap (faster for dense graphs)
+let (path, distance) = dijkstra::find_shortest_path_fibonacci(lines.clone())?;
+
+// Unsafe Fibonacci heap (fastest, uses unsafe code)
+let (path, distance) = dijkstra::find_shortest_path_fibonacci_unsafe(lines.clone())?;
+
+// Pairing heap (often faster than Fibonacci in practice)
+let (path, distance) = dijkstra::find_shortest_path_pairing(lines.clone())?;
+
+// Radix heap (excellent for integer weights)
+let (path, distance) = dijkstra::find_shortest_path_radix(lines.clone())?;
+
+// Dial's algorithm (optimal for small integer weights)
+let (path, distance) = dijkstra::find_shortest_path_dial(lines.clone())?;
+```
+
+### Low-Level API
+
+For more control, you can use the heap-specific Dijkstra functions directly:
+
+```rust
+use weighted_path::dijkstra;
+
+// Build adjacency list: graph[u] contains (v, weight) edges
+let graph = vec![
+    vec![(1, 2), (2, 5)],  // Node 0 -> Node 1 (weight 2), Node 0 -> Node 2 (weight 5)
+    vec![(2, 1), (3, 3)],  // Node 1 -> Node 2 (weight 1), Node 1 -> Node 3 (weight 3)
+    vec![(3, 2)],          // Node 2 -> Node 3 (weight 2)
+    vec![],                 // Node 3 (no outgoing edges)
+];
+
+// Find shortest path from node 0 to node 3
+let (path, distance) = dijkstra::dijkstra_binary(0, 3, &graph);
+// path: [0, 1, 3]
+// distance: Some(5)
+```
+
+### Directed Graphs
+
+```rust
+use weighted_path::dijkstra;
+
+let lines = vec![/* ... */];
+
+// Process as directed graph (edges are one-way only)
+let (path, distance) = dijkstra::find_shortest_path_directed(lines, false)?;
+
+// Process as undirected graph (edges are bidirectional)
+let (path, distance) = dijkstra::find_shortest_path_directed(lines, true)?;
+```
+
+### Generic Dijkstra Function
+
+For maximum flexibility, use the generic `dijkstra` function with any heap implementing the `PriorityQueue` trait:
+
+```rust
+use weighted_path::dijkstra;
+use weighted_path::radix::RadixHeap;
+
+let graph = vec![/* adjacency list */];
+let mut heap = RadixHeap::new();
+let (path, distance) = dijkstra::dijkstra(0, 3, &graph, &mut heap);
+```
+
+## Command-Line Tool
+
+The library includes a command-line binary for convenience and experimentation:
+
+### Building the Binary
 
 ```bash
 cargo build --release
 ```
 
-## Usage
+### Running the Binary
 
 ```bash
 cargo run --bin weighted_path <input_file>
@@ -26,9 +136,11 @@ Or using the compiled binary:
 
 By default, the binary uses the **binary heap** implementation of Dijkstra.
 
+**Note:** The command-line tool is primarily intended for testing, benchmarking, and experimentation. For production use, prefer the library API shown above.
+
 ### Selecting the Dijkstra / heap implementation (lab mode)
 
-The binary also exposes a small "lab mode" flag that lets you choose which
+The binary exposes a "lab mode" flag that lets you choose which
 underlying Dijkstra / heap implementation to use. This is mainly intended for
 experimentation, benchmarking, and regression checks; for typical one-off runs
 you will not notice a visible difference, because **file I/O and graph parsing
@@ -99,8 +211,12 @@ B|D|2
 
 ## Output Format
 
-The program outputs the shortest path from the first node to the last node as a dash-separated
-string of node names, followed by the total distance in parentheses, or `-1` if no path exists.
+The library functions return a tuple `(path_string, distance)` where:
+
+- `path_string` is a dash-separated string of node names (e.g., `"A-B-D"`), or `"-1"` if no path exists.
+- `distance` is an `Option<u32>` containing the total shortest-path distance, or `None` if no path exists.
+
+The command-line tool outputs the path string followed by the total distance in parentheses, or `-1` if no path exists.
 
 ### Example Output
 
@@ -121,13 +237,13 @@ This runs unit tests, including file-based test cases in `testdata/` (when prese
 
 ## Algorithm
 
-The program uses Dijkstra's algorithm to find the shortest path:
+The library implements Dijkstra's algorithm to find shortest paths:
 
 1. Parse the graph and build an adjacency list.
-2. Use Dijkstra's algorithm to find the shortest path from the first node to the last node and
-   its total distance.
-3. Return the path as a dash-separated string together with the total distance, or `-1` if no
-   path exists.
+2. Use Dijkstra's algorithm to find the shortest path from the source node to the target node and
+   compute its total distance.
+3. Return the path as a vector of node indices together with the total distance, or `None` if no
+   path exists. The high-level helper functions format this as a dash-separated string.
 
 ## Edge Cases
 
@@ -145,14 +261,18 @@ Test cases are located in the `testdata/` directory:
 
 ## Error Handling
 
-The program validates input and provides clear error messages for:
+The library validates input and returns `Result` types with clear error messages for:
 
-- Missing command-line arguments.
-- File not found or unreadable.
 - Invalid number format.
 - Missing nodes in edge definitions.
 - Malformed edge lines.
 - Duplicate node names.
+- Empty or invalid graph structure.
+
+The command-line tool additionally handles:
+
+- Missing command-line arguments.
+- File not found or unreadable.
 
 ## Benchmarking
 
