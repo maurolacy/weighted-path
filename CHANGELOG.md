@@ -21,6 +21,7 @@ and the project follows Semantic Versioning.
 
 ### Documentation
 
+- Add doc tests for working / tested examples.
 - Add example showing the full workflow: parsing graph strings with `parse_graph`, calling underlying Dijkstra functions, and converting path indices back to node names.
 - Clarify separation between library API (returns `Result` types) and command-line tool concerns (file I/O, argument parsing).
 
