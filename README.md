@@ -12,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-weighted_path = "0.5"
+weighted_path = "0.6"
 ```
 
 ### Basic Example
